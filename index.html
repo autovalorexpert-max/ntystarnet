@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#030712">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NTY Starnet">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NTY Starnet">
+<link rel="apple-touch-icon" href="/icon-192.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<title>NTY Starnet — Gestion WiFi</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#030712;--bg2:#060f1f;--bg3:#0a1628;--card:#0d1f38;--card2:#112240;
+  --border:rgba(99,179,255,0.12);--border2:rgba(99,179,255,0.25);
+  --accent:#3b82f6;--accent2:#60a5fa;--accent3:#93c5fd;
+  --gold:#f59e0b;--gold2:#fbbf24;
+  --success:#10b981;--danger:#ef4444;--warning:#f59e0b;--purple:#8b5cf6;
+  --text:#f0f9ff;--text2:#94a3b8;--text3:#475569;
+  --glow:0 0 30px rgba(59,130,246,0.15);
+  --font:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
+  --r:12px;--r2:16px;--r3:24px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.page{display:none;min-height:100vh}
+.page.active{display:block}
+
+/* ═══════════════ STARS BACKGROUND ═══════════════ */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,3s) ease-in-out infinite var(--delay,0s)}
+@keyframes twinkle{0%,100%{opacity:0.1}50%{opacity:var(--op,0.6)}}
+
+/* ═══════════════ LOGIN ═══════════════ */
+.login-wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-glow{position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:400px;height:400px;background:radial-gradient(ellipse,rgba(59,130,246,0.15) 0%,transparent 70%);pointer-events:none}
+
+/* LOGO */
+.logo-wrap{text-align:center;margin-bottom:32px}
+.logo-svg-wrap{width:80px;height:80px;margin:0 auto 16px;position:relative}
+.logo-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--border2);animation:spin 8s linear infinite}
+.logo-ring2{position:absolute;inset:6px;border-radius:50%;border:1px solid rgba(99,179,255,0.1);animation:spin 12s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.logo-inner{position:absolute;inset:12px;background:linear-gradient(135deg,#0d1f38,#1a3a6e);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(59,130,246,0.3)}
+.logo-name{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#60a5fa,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--text3);margin-top:4px}
+.logo-tagline{font-size:13px;color:var(--text2);margin-top:8px}
+
+.login-card{background:linear-gradient(135deg,rgba(13,31,56,0.9),rgba(17,34,64,0.9));border:1px solid var(--border2);border-radius:var(--r3);padding:28px;width:100%;max-width:380px;backdrop-filter:blur(20px);box-shadow:var(--glow),0 25px 50px rgba(0,0,0,0.5)}
+.form-label{font-size:12px;font-weight:600;letter-spacing:0.05em;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase}
+.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(6,15,31,0.8);color:var(--text);margin-bottom:14px;outline:none;font-family:var(--font);transition:border-color .2s,box-shadow .2s}
+.form-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+.btn-login{width:100%;padding:14px;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:var(--font);letter-spacing:0.03em;transition:all .2s;box-shadow:0 4px 20px rgba(59,130,246,0.3)}
+.btn-login:active{transform:scale(0.98)}
+
+/* ═══════════════ LAYOUT ═══════════════ */
+.app-wrap{position:relative;z-index:1;max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:80px}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(3,7,18,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.topbar-icon{width:32px;height:32px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2)}
+.topbar-name{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-role{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.content{padding:16px}
+
+/* ═══════════════ BOTTOM NAV ═══════════════ */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(6,15,31,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:50;padding:8px 0 12px}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:10px;font-family:var(--font);letter-spacing:0.05em;text-transform:uppercase;transition:color .2s;position:relative}
+.nav-btn.active{color:var(--accent2)}
+.nav-btn svg{transition:transform .2s}
+.nav-btn.active svg{transform:scale(1.1)}
+.nav-dot{position:absolute;top:4px;right:calc(50% - 14px);width:7px;height:7px;background:var(--danger);border-radius:50%;border:2px solid var(--bg);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* ═══════════════ CARDS ═══════════════ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,179,255,0.3),transparent)}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:12px}
+
+/* STATUS CARD */
+.status-card{background:linear-gradient(135deg,var(--card),var(--card2));border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:12px;position:relative;overflow:hidden}
+.status-card::after{content:'';position:absolute;top:-50%;right:-20%;width:150px;height:150px;background:radial-gradient(ellipse,rgba(59,130,246,0.08),transparent);pointer-events:none}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center}
+.stat-num{font-family:var(--mono);font-size:28px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-top:4px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.03em}
+.badge-active{background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.2)}
+.badge-expired{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+.badge-pending{background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)}
+
+/* BUTTONS */
+.btn{width:100%;padding:12px;border-radius:var(--r);border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font);transition:all .15s;margin-bottom:8px;letter-spacing:0.02em}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;box-shadow:0 4px 15px rgba(59,130,246,0.25)}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 4px 15px rgba(16,185,129,0.2)}
+.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 15px rgba(239,68,68,0.2)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;box-shadow:0 4px 15px rgba(245,158,11,0.2)}
+.btn-sm{padding:8px 14px;font-size:13px;width:auto;margin:0}
+.btn-icon{width:38px;height:38px;padding:0;border-radius:10px;margin:0}
+
+/* INPUTS */
+.inp{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(6,15,31,0.6);color:var(--text);margin-bottom:10px;outline:none;font-family:var(--font);transition:border-color .2s}
+.inp:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(59,130,246,0.08)}
+.inp-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block;letter-spacing:0.03em}
+textarea.inp{resize:vertical;min-height:80px}
+select.inp{cursor:pointer}
+
+/* TICKET BOX */
+.ticket-box{background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(99,102,241,0.08));border:1px solid var(--border2);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:12px;position:relative;overflow:hidden}
+.ticket-box::before{content:'MIKROTIK TICKET';position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:3px;color:var(--text3);font-family:var(--mono)}
+.ticket-code{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent2);letter-spacing:3px;word-break:break-all;margin-top:8px}
+.ticket-valid{font-size:11px;color:var(--text3);margin-top:6px}
+
+/* PLAN CARDS */
+.plan-card{border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.plan-card.selected{border-color:var(--accent);border-width:2px;background:rgba(59,130,246,0.07)}
+.plan-card.selected::before{content:'✓';position:absolute;top:8px;right:10px;color:var(--accent2);font-weight:700;font-size:14px}
+.plan-name{font-weight:600;font-size:14px}
+.plan-price{font-size:20px;font-weight:700;color:var(--accent2);font-family:var(--mono)}
+.plan-desc{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* PAY INFO */
+.pay-box{background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(5,150,105,0.06));border:1px solid rgba(16,185,129,0.2);border-radius:var(--r2);padding:16px;margin-bottom:14px}
+.pay-num{font-family:var(--mono);font-size:17px;font-weight:700;color:#34d399;display:block;margin:3px 0}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;color:var(--text3);font-size:13px;margin-bottom:10px;transition:all .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent2);background:rgba(59,130,246,0.05)}
+
+/* CHAT */
+.msg-list{padding:12px;min-height:200px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:320px}
+.bubble{padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;max-width:82%;word-break:break-word}
+.bubble-sent{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.bubble-recv{background:var(--card2);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:4px;align-self:flex-start}
+.msg-meta{font-size:10px;color:var(--text3);margin-top:3px}
+.chat-inp-row{border-top:1px solid var(--border);padding:10px 12px;display:flex;gap:8px;align-items:center;background:var(--bg2)}
+
+/* CLIENT LIST */
+.client-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.client-row:last-child{border-bottom:none}
+.avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent2);flex-shrink:0;border:1px solid var(--border2)}
+
+/* TICKET ITEMS */
+.ticket-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(6,15,31,0.6);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)}
+.ticket-used{opacity:.35;text-decoration:line-through}
+.tag{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600;font-family:var(--font)}
+.tag-used{background:rgba(239,68,68,0.12);color:#f87171}
+.tag-free{background:rgba(16,185,129,0.12);color:#34d399}
+.tag-cur{background:rgba(59,130,246,0.15);color:var(--accent2)}
+
+/* NOTIFICATION */
+.notif-bar{display:flex;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:8px;font-size:13px;align-items:flex-start;border:1px solid}
+.notif-success{background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.2);color:#34d399}
+.notif-warning{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);color:#fbbf24}
+.notif-info{background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--accent2)}
+.notif-danger{background:rgba(239,68,68,0.06);border-color:rgba(239,68,68,0.2);color:#f87171}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:14px 0}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--r3) var(--r3) 0 0;padding:24px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:22px;line-height:1;padding:0}
+
+/* PROGRESS */
+.progress-wrap{margin-bottom:14px}
+.progress-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px}
+.progress-bar{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width 0.5s}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em}
+
+/* PAY ROW */
+.pay-row{padding:12px 0;border-bottom:1px solid var(--border)}
+.pay-row:last-child{border-bottom:none}
+
+/* BACK BTN */
+.back-btn{background:none;border:none;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:6px;font-size:14px;font-family:var(--font);padding:0;margin-bottom:14px;font-weight:500}
+
+/* EXPIRY INDICATOR */
+.expiry-bar{height:4px;border-radius:2px;margin-top:8px;background:rgba(255,255,255,0.06);overflow:hidden}
+.expiry-fill{height:100%;border-radius:2px}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-inp{width:100%;padding:11px 14px 11px 38px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(6,15,31,0.6);color:var(--text);outline:none;font-family:var(--font)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3)}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:rgba(6,15,31,0.6);border-radius:var(--r);padding:4px;margin-bottom:16px;border:1px solid var(--border)}
+.tab{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);letter-spacing:0.04em;text-transform:uppercase;transition:all .15s}
+.tab.active{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
+
+/* REVENUE CARD */
+.revenue-card{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,6,0.05));border:1px solid rgba(245,158,11,0.2);border-radius:var(--r2);padding:16px;margin-bottom:12px}
+.revenue-num{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--gold2)}
+
+/* INFO ROW */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-key{font-size:12px;color:var(--text3)}
+.info-val{font-size:13px;font-weight:500}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 16px;color:var(--text3);font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:10px;opacity:0.4}
+
+/* ALERT */
+.alert{border-radius:var(--r);padding:12px 14px;font-size:13px;margin-bottom:12px;border:1px solid}
+.alert-danger{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2);color:#f87171}
+.alert-success{background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.2);color:#34d399}
+
+/* PREMIUM FEATURE TAG */
+.feature-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(217,119,6,0.1));color:var(--gold2);border:1px solid rgba(245,158,11,0.2)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.3s ease}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+</style>
+</head>
+<body>
+
+<!-- STARS -->
+<div class="stars" id="stars"></div>
+
+<!-- ═══════════ LOGIN PAGE ═══════════ -->
+<div class="page active" id="page-login">
+  <div class="login-glow"></div>
+  <div class="login-wrap">
+    <div class="logo-wrap fade-up">
+      <div class="logo-svg-wrap">
+        <div class="logo-ring"></div>
+        <div class="logo-ring2"></div>
+        <div class="logo-inner">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" stroke="#34d399" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="20" r="1.5" fill="#60a5fa"/>
+          </svg>
+        </div>
+      </div>
+      <div class="logo-name">NTY STARNET</div>
+      <div class="logo-sub">WiFi Manager Pro</div>
+      <div class="logo-tagline">Votre connexion, notre priorité</div>
+    </div>
+
+    <div class="login-card fade-up">
+      <div style="margin-bottom:20px">
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px">Connexion</div>
+        <div style="font-size:13px;color:var(--text2)">Accédez à votre espace personnel</div>
+      </div>
+      <label class="form-label">Nom d'utilisateur</label>
+      <input class="form-input" type="text" id="login-user" placeholder="Entrez votre username" autocomplete="username">
+      <label class="form-label">Mot de passe</label>
+      <div style="position:relative">
+        <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px">
+        <button onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);display:flex;padding:0" id="eye-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div id="login-err" style="color:#f87171;font-size:13px;margin-bottom:10px;display:none;padding:10px;background:rgba(239,68,68,0.08);border-radius:8px;border:1px solid rgba(239,68,68,0.2)">⚠️ Identifiants incorrects</div>
+      <button class="btn-login" onclick="doLogin()" id="login-btn">Se connecter →</button>
+    </div>
+
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:20px">
+      © 2026 NTY Starnet · Tous droits réservés
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CLIENT PAGES ═══════════ -->
+<div class="page" id="page-client">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#60a5fa"/></svg>
+      </div>
+      <div>
+        <div class="topbar-name">NTY STARNET</div>
+        <div class="topbar-role">Espace client</div>
+      </div>
+    </div>
+    <button onclick="logout()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:12px;font-family:var(--font)">Déco.</button>
+  </div>
+
+  <div class="app-wrap">
+    <div class="content" id="c-content">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+
+  <div class="bottom-nav" id="c-nav">
+    <button class="nav-btn active" onclick="cPage('home',this)" id="cnav-home">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Accueil
+    </button>
+    <button class="nav-btn" onclick="cPage('paiement',this)" id="cnav-paiement">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Paiement
+    </button>
+    <button class="nav-btn" onclick="cPage('messages',this)" id="cnav-msg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Messages
+      <span class="nav-dot" id="c-msg-dot" style="display:none"></span>
+    </button>
+    <button class="nav-btn" onclick="cPage('profil',this)" id="cnav-profil">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profil
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ ADMIN PAGES ═══════════ -->
+<div class="page" id="page-admin">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#60a5fa"/></svg>
+      </div>
+      <div>
+        <div class="topbar-name">NTY STARNET</div>
+        <div class="topbar-role">Administration</div>
+      </div>
+    </div>
+    <button onclick="logout()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:12px;font-family:var(--font)">Déco.</button>
+  </div>
+
+  <div class="app-wrap">
+    <div class="content" id="a-content"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="aPage('dashboard',this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-btn" onclick="aPage('clients',this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clients
+    </button>
+    <button class="nav-btn" onclick="aPage('paiements',this)" id="anav-pay">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Paiements
+      <span class="nav-dot" id="a-pay-dot" style="display:none"></span>
+    </button>
+    <button class="nav-btn" onclick="aPage('messages',this)" id="anav-msg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Messages
+      <span class="nav-dot" id="a-msg-dot" style="display:none"></span>
+    </button>
+    <button class="nav-btn" onclick="aPage('stats',this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+// ═══════════════ STARS ═══════════════
+(function(){
+  const s=document.getElementById('stars');
+  for(let i=0;i<80;i++){
+    const el=document.createElement('div');
+    el.className='star';
+    const size=Math.random()*2+0.5;
+    el.style.cssText=`width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${2+Math.random()*4}s;--delay:${Math.random()*4}s;--op:${0.3+Math.random()*0.6}`;
+    s.appendChild(el);
+  }
+})();
+
+// ═══════════════ DATABASE ═══════════════
+let DB={
+  users:[
+    {id:'admin',username:'nyti',password:'wifi2026',name:'Administrateur',role:'admin'},
+    {id:'c1',username:'rakoto',password:'client123',name:'Rakoto Jean',role:'client',status:'active',plan:'100 Go',planPrice:'40.000',exp:'2026-07-13',phone:'034 12 345 67',tickets:['ABC123-XYZ','DEF456-UVW','GHI789-RST'],usedTickets:['ABC123-XYZ'],currentTicket:'ABC123-XYZ',joinDate:'2026-01-15'},
+    {id:'c2',username:'rasoa',password:'client123',name:'Rasoa Marie',role:'client',status:'pending',plan:'200 Go',planPrice:'55.000',exp:null,phone:'032 98 765 43',tickets:['TKT001-AAA','TKT002-BBB'],usedTickets:[],currentTicket:null,joinDate:'2026-05-20'},
+  ],
+  payments:[
+    {id:'p1',clientId:'c2',client:'Rasoa Marie',plan:'200 Go',amount:'55.000',date:'2026-06-14',ref:'TXN789456',status:'pending',photoUrl:null,createdAt:'2026-06-14'},
+    {id:'p2',clientId:'c1',client:'Rakoto Jean',plan:'100 Go',amount:'40.000',date:'2026-06-01',ref:'TXN111222',status:'validated',photoUrl:null,createdAt:'2026-06-01'},
+  ],
+  messages:{
+    c1:[{from:'client',name:'Rakoto Jean',text:'Bonjour, mon ticket ne fonctionne plus.',time:'09:00',date:'2026-06-13'},{from:'admin',name:'Admin',text:'Bonjour Rakoto ! Je vais vous envoyer un nouveau ticket sous peu.',time:'09:05',date:'2026-06-13'}],
+    c2:[]
+  },
+  settings:{paymentNumbers:['0344127501','0346341775','0321825114'],planPrices:{'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'}}
+};
+
+let me=null,curPayId=null,curDetailId=null,curChatId=null,selPlanName='100 Go',photoData=null,curClientPage='home',curAdminPage='dashboard';
+
+function save(){try{localStorage.setItem('nty_db',JSON.stringify(DB));}catch(e){}}
+function loadDB(){try{const d=localStorage.getItem('nty_db');if(d)DB=JSON.parse(d);}catch(e){}}
+loadDB();
+
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function now(){return new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'});}
+function today(){return new Date().toISOString().split('T')[0];}
+function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}catch{return d;}}
+function daysLeft(exp){if(!exp)return null;const diff=Math.ceil((new Date(exp)-new Date())/(1000*60*60*24));return diff;}
+function showModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').style.display='flex';}
+function closeModal(){document.getElementById('modal').style.display='none';}
+function togglePass(){const i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password';}
+
+// ═══════════════ LOGIN ═══════════════
+function doLogin(){
+  const btn=document.getElementById('login-btn');
+  btn.textContent='Connexion...';btn.disabled=true;
+  setTimeout(()=>{
+    const u=document.getElementById('login-user').value.trim().toLowerCase();
+    const p=document.getElementById('login-pass').value;
+    const user=DB.users.find(x=>x.username===u&&x.password===p);
+    if(!user){
+      document.getElementById('login-err').style.display='block';
+      btn.textContent='Se connecter →';btn.disabled=false;return;
+    }
+    document.getElementById('login-err').style.display='none';
+    me=user;
+    if(user.role==='admin'){showPage('page-admin');aPage('dashboard',null);}
+    else{showPage('page-client');cPage('home',null);}
+    btn.textContent='Se connecter →';btn.disabled=false;
+  },600);
+}
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
+
+function logout(){me=null;document.getElementById('login-user').value='';document.getElementById('login-pass').value='';showPage('page-login');}
+
+// ═══════════════ CLIENT NAV ═══════════════
+function cPage(page,btn){
+  curClientPage=page;
+  document.querySelectorAll('#page-client .nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  else{const b=document.getElementById('cnav-'+page);if(b)b.classList.add('active');}
+  const c=document.getElementById('c-content');
+  c.innerHTML='';c.className='content fade-up';
+  if(page==='home')renderClientHome();
+  else if(page==='paiement')renderClientPaiement();
+  else if(page==='messages')renderClientMessages();
+  else if(page==='profil')renderClientProfil();
+}
+
+// ═══════════════ CLIENT HOME ═══════════════
+function renderClientHome(){
+  const u=me;
+  const dl=daysLeft(u.exp);
+  const free=u.tickets?(u.tickets.filter(t=>!u.usedTickets.includes(t)).length):0;
+  let html='';
+
+  // Greeting
+  const h=new Date().getHours();
+  const greet=h<12?'Bonjour':'Bonsoir';
+  html+=`<div style="margin-bottom:16px"><div style="font-size:22px;font-weight:700">${greet}, ${u.name.split(' ')[0]} 👋</div><div style="font-size:13px;color:var(--text2);margin-top:2px">Bienvenue sur NTY Starnet</div></div>`;
+
+  // Notifications
+  const notifs=[];
+  if(dl!==null&&dl<=7&&dl>=0)notifs.push({cls:'notif-warning',text:`⚠️ Votre abonnement expire dans <strong>${dl} jour${dl>1?'s':''}</strong>. Renouvelez maintenant !`});
+  if(dl!==null&&dl<0)notifs.push({cls:'notif-danger',text:`❌ Votre abonnement a expiré. Veuillez renouveler.`});
+  if(u.currentTicket)notifs.push({cls:'notif-success',text:`✅ Votre ticket Mikrotik est actif.`});
+  if(free===0&&u.status==='active')notifs.push({cls:'notif-danger',text:`⚠️ Plus de tickets disponibles. Contactez l'admin.`});
+  if(DB.payments.filter(p=>p.clientId===u.id&&p.status==='pending').length>0)notifs.push({cls:'notif-info',text:`🕐 Votre paiement est en cours de validation.`});
+  notifs.forEach(n=>{html+=`<div class="notif-bar ${n.cls}">${n.text}</div>`;});
+
+  // Status card
+  const statusLabel={active:'Actif',expired:'Expiré',pending:'En attente'};
+  const pct=dl!==null&&dl>0?Math.min(100,Math.round(dl/30*100)):0;
+  const fillColor=pct>50?'var(--success)':pct>20?'var(--warning)':'var(--danger)';
+  html+=`<div class="status-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Abonnement</div>
+        <span class="badge badge-${u.status||'pending'}">${statusLabel[u.status||'pending']}</span>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">PLAN</div>
+        <div style="font-weight:700;font-size:15px">${u.plan||'—'}</div>
+        <div style="font-size:12px;color:var(--text3)">${u.planPrice||'—'} Ar/mois</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <div><div style="font-size:11px;color:var(--text3)">EXPIRATION</div><div style="font-weight:600;font-size:14px;margin-top:2px">${fmtDate(u.exp)}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--text3)">JOURS RESTANTS</div><div style="font-weight:700;font-size:20px;color:${fillColor};font-family:var(--mono);margin-top:2px">${dl!==null&&dl>=0?dl:'—'}</div></div>
+    </div>
+    ${dl!==null&&dl>=0?`<div class="expiry-bar"><div class="expiry-fill" style="width:${pct}%;background:${fillColor}"></div></div>`:''}
+    <button class="btn btn-primary" style="margin-top:14px;margin-bottom:0" onclick="cPage('paiement',document.getElementById('cnav-paiement'))">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Renouveler l'abonnement
+    </button>
+  </div>`;
+
+  // Ticket actuel
+  if(u.currentTicket){
+    html+=`<div class="ticket-box">
+      <div class="ticket-code">${u.currentTicket}</div>
+      <div class="ticket-valid">✓ Valable 30 jours · ${fmtDate(u.exp)}</div>
+    </div>`;
+  }
+
+  // Stats rapides
+  const myPays=DB.payments.filter(p=>p.clientId===u.id);
+  const validated=myPays.filter(p=>p.status==='validated').length;
+  html+=`<div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--accent2)">${validated}</div>
+      <div class="stat-lbl">Paiements validés</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--success)">${free}</div>
+      <div class="stat-lbl">Tickets dispo</div>
+    </div>
+  </div>`;
+
+  // Historique
+  html+=`<div class="card"><div class="card-title">Historique des paiements</div>`;
+  const pays=DB.payments.filter(p=>p.clientId===u.id).slice().reverse();
+  if(!pays.length){html+=`<div class="empty"><div class="empty-icon">💳</div>Aucun paiement</div>`;}
+  else pays.slice(0,4).forEach(p=>{
+    const ic=p.status==='validated'?'✅':p.status==='rejected'?'❌':'🕐';
+    html+=`<div class="info-row"><div><div style="font-size:13px;font-weight:500">${ic} ${p.plan}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(p.date)} · Réf: ${p.ref}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:13px;font-weight:600">${p.amount} Ar</div><span class="badge badge-${p.status}" style="font-size:10px;padding:2px 8px">${{validated:'Validé',pending:'En attente',rejected:'Refusé'}[p.status]}</span></div></div>`;
+  });
+  html+=`</div>`;
+
+  document.getElementById('c-content').innerHTML=html;
+}
+
+// ═══════════════ CLIENT PAIEMENT ═══════════════
+function renderClientPaiement(){
+  const plans=[['100 Go','40.000','30 jours · 1 appareil'],['200 Go','55.000','30 jours · 1 appareil'],['Illimité 5 appareils','65.000','30 jours · jusqu\'à 5 appareils'],['Illimité 9+ appareils','90.000','30 jours · 9+ appareils']];
+  let html=`<div style="font-size:20px;font-weight:700;margin-bottom:4px">Renouveler</div>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Choisissez votre abonnement</div>
+  <div class="pay-box">
+    <div style="font-size:12px;color:#34d399;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">📲 Envoyer le paiement sur</div>
+    <span class="pay-num">0344127501</span>
+    <span class="pay-num">0346341775</span>
+    <span class="pay-num">0321825114</span>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Puis remplissez le formulaire ci-dessous</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Choisir un abonnement</div>`;
+  plans.forEach(([n,p,d],i)=>{
+    html+=`<div class="plan-card${i===0?' selected':''}" onclick="selPlan(this,'${n}','${p}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div class="plan-name">${n}</div><div class="plan-desc">${d}</div></div>
+        <div class="plan-price">${p} Ar</div>
+      </div>
+    </div>`;
+  });
+  html+=`<div class="divider"></div>
+    <label class="inp-label">Date du paiement *</label>
+    <input class="inp" type="date" id="c-paydate" max="${today()}">
+    <label class="inp-label">Référence du paiement</label>
+    <input class="inp" type="text" id="c-payref" placeholder="Ex: TXN123456789">
+    <label class="inp-label">Photo du reçu (recommandé)</label>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('c-photo').click()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block;margin:0 auto 8px;color:var(--text3)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Appuyez pour ajouter une photo
+      <div style="font-size:11px;margin-top:4px;color:var(--text3)">JPG, PNG · Max 5MB</div>
+      <input type="file" id="c-photo" accept="image/*" style="display:none" onchange="previewPhoto()">
+    </div>
+    <div id="photo-preview" style="display:none;margin-bottom:10px">
+      <img id="preview-img" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;border:1px solid var(--border)">
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="removePhoto()">🗑 Supprimer la photo</button>
+    </div>
+    <button class="btn btn-primary" onclick="submitPay()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Envoyer la demande
+    </button>
+  </div>`;
+  document.getElementById('c-content').innerHTML=html;
+  selPlanName='100 Go';
+}
+
+function selPlan(el,name,price){document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');selPlanName=name;}
+
+function previewPhoto(){
+  const f=document.getElementById('c-photo').files[0];
+  if(!f)return;
+  if(f.size>5*1024*1024){alert('Image trop grande (max 5MB)');return;}
+  const r=new FileReader();
+  r.onload=e=>{photoData=e.target.result;document.getElementById('preview-img').src=photoData;document.getElementById('photo-preview').style.display='block';document.getElementById('upload-zone').style.display='none';};
+  r.readAsDataURL(f);
+}
+
+function removePhoto(){photoData=null;document.getElementById('c-photo').value='';document.getElementById('photo-preview').style.display='none';document.getElementById('upload-zone').style.display='block';}
+
+function submitPay(){
+  const d=document.getElementById('c-paydate').value;
+  if(!d){alert('⚠️ Veuillez indiquer la date du paiement.');return;}
+  const price=DB.settings.planPrices[selPlanName]||'—';
+  DB.payments.push({id:'p'+Date.now(),clientId:me.id,client:me.name,plan:selPlanName,amount:price,date:d,ref:document.getElementById('c-payref').value||'—',status:'pending',photoUrl:photoData,createdAt:today()});
+  me.status='pending';
+  const u=DB.users.find(x=>x.id===me.id);if(u)u.status='pending';
+  photoData=null;save();
+  showModal(`<div style="text-align:center;padding:10px">
+    <div style="font-size:48px;margin-bottom:16px">✅</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px">Demande envoyée !</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">L'administrateur va valider votre paiement et vous envoyer votre ticket Mikrotik.</div>
+    <button class="btn btn-primary" onclick="closeModal();cPage('home',document.getElementById('cnav-home'))">OK</button>
+  </div>`);
+}
+
+// ═══════════════ CLIENT MESSAGES ═══════════════
+function renderClientMessages(){
+  document.getElementById('c-msg-dot').style.display='none';
+  const msgs=DB.messages[me.id]||[];
+  let html=`<div style="font-size:20px;font-weight:700;margin-bottom:16px">Messages</div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div><div style="font-weight:600;font-size:14px">NTY Starnet Support</div><div style="font-size:11px;color:var(--success)">● En ligne</div></div>
+    </div>
+    <div class="msg-list" id="c-msg-list">`;
+  if(!msgs.length)html+=`<div class="empty"><div class="empty-icon">💬</div>Commencez la conversation</div>`;
+  else msgs.forEach(m=>{
+    const mine=m.from==='client';
+    html+=`<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'}">
+      <div class="bubble bubble-${mine?'sent':'recv'}">${m.text}</div>
+      <div class="msg-meta" style="text-align:${mine?'right':'left'}">${m.time}</div>
+    </div>`;
+  });
+  html+=`</div>
+    <div class="chat-inp-row">
+      <input class="inp" type="text" id="c-msg-inp" placeholder="Écrire un message..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')cSendMsg()">
+      <button class="btn btn-primary btn-sm" onclick="cSendMsg()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>`;
+  document.getElementById('c-content').innerHTML=html;
+  const el=document.getElementById('c-msg-list');
+  if(el)el.scrollTop=el.scrollHeight;
+}
+
+function cSendMsg(){
+  const inp=document.getElementById('c-msg-inp');
+  if(!inp||!inp.value.trim())return;
+  if(!DB.messages[me.id])DB.messages[me.id]=[];
+  DB.messages[me.id].push({from:'client',name:me.name,text:inp.value.trim(),time:now(),date:today()});
+  inp.value='';save();renderClientMessages();
+}
+
+// ═══════════════ CLIENT PROFIL ═══════════════
+function renderClientProfil(){
+  const u=me;
+  let html=`<div style="text-align:center;margin-bottom:20px">
+    <div style="width:70px;height:70px;border-radius:20px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;font-weight:700;color:var(--accent2);font-family:var(--mono);border:2px solid var(--border2)">${u.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+    <div style="font-size:18px;font-weight:700">${u.name}</div>
+    <div style="font-size:13px;color:var(--text2)">@${u.username}</div>
+    <div style="margin-top:8px"><span class="badge badge-${u.status||'pending'}">${{active:'Actif',expired:'Expiré',pending:'En attente'}[u.status||'pending']}</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Informations</div>
+    <div class="info-row"><div class="info-key">Téléphone</div><div class="info-val">${u.phone||'—'}</div></div>
+    <div class="info-row"><div class="info-key">Plan</div><div class="info-val">${u.plan||'—'}</div></div>
+    <div class="info-row"><div class="info-key">Expiration</div><div class="info-val">${fmtDate(u.exp)}</div></div>
+    <div class="info-row"><div class="info-key">Membre depuis</div><div class="info-val">${fmtDate(u.joinDate)}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Sécurité</div>
+    <button class="btn btn-ghost" onclick="showChangePass()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Changer mon mot de passe
+    </button>
+  </div>
+  <button class="btn btn-danger" onclick="logout()" style="margin-top:4px">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Se déconnecter
+  </button>`;
+  document.getElementById('c-content').innerHTML=html;
+}
+
+function showChangePass(){
+  showModal(`<div class="modal-title">Changer le mot de passe <button class="modal-close" onclick="closeModal()">×</button></div>
+    <label class="inp-label">Mot de passe actuel</label>
+    <input class="inp" type="password" id="old-pass" placeholder="••••••••">
+    <label class="inp-label">Nouveau mot de passe</label>
+    <input class="inp" type="password" id="new-pass" placeholder="••••••••">
+    <label class="inp-label">Confirmer le nouveau mot de passe</label>
+    <input class="inp" type="password" id="conf-pass" placeholder="••••••••">
+    <button class="btn btn-primary" onclick="changePass()">Changer le mot de passe</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>`);
+}
+
+function changePass(){
+  const old=document.getElementById('old-pass').value;
+  const n=document.getElementById('new-pass').value;
+  const c=document.getElementById('conf-pass').value;
+  if(old!==me.password){alert('Mot de passe actuel incorrect');return;}
+  if(n.length<6){alert('Le nouveau mot de passe doit faire au moins 6 caractères');return;}
+  if(n!==c){alert('Les mots de passe ne correspondent pas');return;}
+  const u=DB.users.find(x=>x.id===me.id);
+  if(u){u.password=n;me.password=n;}
+  save();closeModal();
+  showModal(`<div style="text-align:center;padding:10px">
+    <div style="font-size:40px;margin-bottom:12px">🔐</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Mot de passe modifié !</div>
+    <button class="btn btn-primary" onclick="closeModal()">OK</button>
+  </div>`);
+}
+
+// ═══════════════ ADMIN NAV ═══════════════
+function aPage(page,btn){
+  curAdminPage=page;
+  document.querySelectorAll('#page-admin .nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  const c=document.getElementById('a-content');
+  c.innerHTML='';c.className='content fade-up';
+  if(page==='dashboard')renderAdminDashboard();
+  else if(page==='clients')renderAdminClients();
+  else if(page==='paiements')renderAdminPaiements();
+  else if(page==='messages')renderAdminMessages();
+  else if(page==='stats')renderAdminStats();
+  // Dots
+  const pendingPay=DB.payments.filter(p=>p.status==='pending').length;
+  const el=document.getElementById('a-pay-dot');
+  if(el)el.style.display=pendingPay>0?'block':'none';
+}
+
+// ═══════════════ ADMIN DASHBOARD ═══════════════
+function renderAdminDashboard(){
+  const clients=DB.users.filter(u=>u.role==='client');
+  const actifs=clients.filter(c=>c.status==='active').length;
+  const expires=clients.filter(c=>c.status==='expired').length;
+  const pending=clients.filter(c=>c.status==='pending').length;
+  const pPending=DB.payments.filter(p=>p.status==='pending').length;
+  const revenue=DB.payments.filter(p=>p.status==='validated').reduce((s,p)=>s+(parseInt(p.amount?.replace('.',''))||0),0);
+
+  let html=`<div style="font-size:20px;font-weight:700;margin-bottom:16px">Tableau de bord</div>`;
+
+  // Revenue
+  html+=`<div class="revenue-card">
+    <div class="card-title" style="color:var(--gold)">💰 Revenus totaux validés</div>
+    <div class="revenue-num">${revenue.toLocaleString('fr')} Ar</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:4px">${DB.payments.filter(p=>p.status==='validated').length} paiements validés</div>
+  </div>`;
+
+  // Stats
+  html+=`<div class="stat-grid">
+    <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${clients.length}</div><div class="stat-lbl">Total clients</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--success)">${actifs}</div><div class="stat-lbl">Actifs</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--warning)">${pending}</div><div class="stat-lbl">En attente</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--danger)">${expires}</div><div class="stat-lbl">Expirés</div></div>
+  </div>`;
+
+  // Paiements en attente
+  const pays=DB.payments.filter(p=>p.status==='pending');
+  if(pays.length>0){
+    html+=`<div class="card">
+      <div class="section-header"><div class="section-title">🔔 Paiements en attente</div><span class="badge badge-pending">${pays.length}</span></div>`;
+    pays.slice(0,3).forEach(p=>{
+      const c=DB.users.find(u=>u.id===p.clientId);
+      const next=c?c.tickets.find(t=>!c.usedTickets.includes(t)):null;
+      html+=`<div class="pay-row">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-weight:600;font-size:14px">${p.client}</div>
+            <div style="font-size:12px;color:var(--text3)">${p.plan} · ${fmtDate(p.date)}</div>
+            ${next?`<div style="font-size:12px;color:var(--success);margin-top:2px">Ticket dispo: ${next}</div>`:`<div style="font-size:12px;color:var(--danger);margin-top:2px">⚠️ Aucun ticket dispo</div>`}
+          </div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:700">${p.amount} Ar</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:13px" onclick="openValidate('${p.id}')">✓ Valider</button>
+          <button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="curPayId='${p.id}';rejectConfirm()">✗</button>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // Clients expirant bientôt
+  const soon=clients.filter(c=>{const dl=daysLeft(c.exp);return dl!==null&&dl>=0&&dl<=7;});
+  if(soon.length>0){
+    html+=`<div class="card">
+      <div class="card-title">⚠️ Expirent bientôt</div>`;
+    soon.forEach(c=>{
+      const dl=daysLeft(c.exp);
+      html+=`<div class="info-row">
+        <div><div style="font-weight:500;font-size:13px">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.plan}</div></div>
+        <div style="font-family:var(--mono);font-weight:700;color:var(--warning);font-size:13px">${dl}j restants</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  document.getElementById('a-content').innerHTML=html;
+}
+
+// ═══════════════ ADMIN CLIENTS ═══════════════
+function renderAdminClients(search=''){
+  const clients=DB.users.filter(u=>u.role==='client'&&(!search||u.name.toLowerCase().includes(search.toLowerCase())||u.username.toLowerCase().includes(search.toLowerCase())));
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div style="font-size:20px;font-weight:700">Clients</div>
+    <button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button>
+  </div>
+  <div class="search-wrap">
+    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input class="search-inp" type="text" placeholder="Rechercher un client..." value="${search}" oninput="renderAdminClients(this.value)">
+  </div>`;
+
+  if(!clients.length){html+=`<div class="empty"><div class="empty-icon">👤</div>Aucun client trouvé</div>`;}
+  else{
+    html+=`<div class="card">`;
+    clients.forEach(c=>{
+      const free=c.tickets?(c.tickets.filter(t=>!c.usedTickets.includes(t)).length):0;
+      const dl=daysLeft(c.exp);
+      html+=`<div class="client-row" onclick="openDetail('${c.id}')">
+        <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px">${c.name}</div>
+          <div style="font-size:11px;color:var(--text3)">@${c.username} · ${free} ticket${free>1?'s':''} · ${dl!==null&&dl>=0?dl+'j':'—'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="badge badge-${c.status||'pending'}">${{active:'Actif',expired:'Expiré',pending:'En attente'}[c.status||'pending']}</span>
+          <span style="font-size:11px;color:var(--text3)">→</span>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  document.getElementById('a-content').innerHTML=html;
+}
+
+// ═══════════════ ADMIN PAIEMENTS ═══════════════
+function renderAdminPaiements(filter='pending'){
+  const all=DB.payments.filter(p=>!filter||p.status===filter).slice().reverse();
+  let html=`<div style="font-size:20px;font-weight:700;margin-bottom:14px">Paiements</div>
+  <div class="tabs">
+    <button class="tab ${filter==='pending'?'active':''}" onclick="renderAdminPaiements('pending')">En attente</button>
+    <button class="tab ${filter==='validated'?'active':''}" onclick="renderAdminPaiements('validated')">Validés</button>
+    <button class="tab ${filter===''?'active':''}" onclick="renderAdminPaiements('')">Tous</button>
+  </div>`;
+  if(!all.length){html+=`<div class="empty"><div class="empty-icon">💳</div>Aucun paiement</div>`;}
+  else all.forEach(p=>{
+    const c=DB.users.find(u=>u.id===p.clientId);
+    const next=c?c.tickets.find(t=>!c.usedTickets.includes(t)):null;
+    const ic=p.status==='validated'?'✅':p.status==='rejected'?'❌':'🕐';
+    html+=`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:15px">${p.client}</div>
+          <div style="font-size:12px;color:var(--text3)">${p.plan} · ${fmtDate(p.date)}</div>
+          <div style="font-size:12px;color:var(--text3)">Réf: ${p.ref}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--mono);font-weight:700;font-size:15px">${p.amount} Ar</div>
+          <span class="badge badge-${p.status}" style="font-size:10px;margin-top:4px">${{validated:'Validé',pending:'En attente',rejected:'Refusé'}[p.status]||p.status}</span>
+        </div>
+      </div>
+      ${p.status==='pending'?`
+        ${next?`<div style="font-size:12px;color:var(--success);margin-bottom:8px;padding:6px 10px;background:rgba(16,185,129,0.06);border-radius:6px">🎫 Prochain ticket: <strong>${next}</strong></div>`:`<div style="font-size:12px;color:var(--danger);margin-bottom:8px;padding:6px 10px;background:rgba(239,68,68,0.06);border-radius:6px">⚠️ Aucun ticket disponible</div>`}
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:13px" onclick="openValidate('${p.id}')">✓ Valider + Envoyer ticket</button>
+          <button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="curPayId='${p.id}';rejectConfirm()">✗</button>
+        </div>`:
+      p.photoUrl?`<button class="btn btn-ghost" style="padding:8px;margin:0;font-size:12px" onclick="showModal('<div class=modal-title>Preuve de paiement <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;${p.photoUrl}&quot; style=&quot;width:100%;border-radius:8px&quot;>')">📷 Voir la preuve</button>`:''}
+    </div>`;
+  });
+  document.getElementById('a-content').innerHTML=html;
+}
+
+// ═══════════════ VALIDATE ═══════════════
+function openValidate(payId){
+  curPayId=payId;
+  const pay=DB.payments.find(p=>p.id===payId);
+  const c=DB.users.find(u=>u.id===pay.clientId);
+  const next=c?c.tickets.find(t=>!c.usedTickets.includes(t)):null;
+  let html=`<div class="modal-title">Valider le paiement <button class="modal-close" onclick="closeModal()">×</button></div>
+  <div style="font-size:14px;color:var(--text2);margin-bottom:14px">Client : <strong style="color:var(--text)">${pay.client}</strong></div>
+  ${[['Plan',pay.plan],['Montant',pay.amount+' Ar'],['Date',fmtDate(pay.date)],['Référence',pay.ref]].map(([k,v])=>`<div class="info-row"><div class="info-key">${k}</div><div class="info-val">${v}</div></div>`).join('')}
+  ${pay.photoUrl?`<div style="margin:12px 0"><div class="inp-label">Preuve de paiement</div><img src="${pay.photoUrl}" style="width:100%;border-radius:8px;max-height:160px;object-fit:cover;border:1px solid var(--border)"></div>`:''}
+  <div class="divider"></div>
+  <div class="ticket-box">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">TICKET QUI SERA ENVOYÉ</div>
+    <div class="ticket-code">${next||'—'}</div>
+  </div>
+  ${!next?`<div class="alert alert-danger">⚠️ Aucun ticket disponible. Ajoutez des tickets dans la fiche du client d'abord.</div>`:''}
+  ${next?`<button class="btn btn-success" onclick="validatePay()">✓ Valider et envoyer le ticket</button>`:''}
+  <button class="btn btn-danger" onclick="closeModal();rejectConfirm()">✗ Refuser le paiement</button>
+  <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>`;
+  showModal(html);
+}
+
+function validatePay(){
+  const pay=DB.payments.find(p=>p.id===curPayId);
+  const c=DB.users.find(u=>u.id===pay.clientId);
+  const next=c.tickets.find(t=>!c.usedTickets.includes(t));
+  pay.status='validated';
+  c.status='active';
+  c.usedTickets.push(next);
+  c.currentTicket=next;
+  c.plan=pay.plan;
+  c.planPrice=pay.amount;
+  const exp=new Date();exp.setDate(exp.getDate()+30);
+  c.exp=exp.toISOString().split('T')[0];
+  if(!DB.messages[c.id])DB.messages[c.id]=[];
+  DB.messages[c.id].push({from:'admin',name:'Admin',text:`✅ Paiement validé ! Voici votre ticket Mikrotik : ${next}\n\nValable 30 jours jusqu'au ${fmtDate(c.exp)}. Connectez-vous avec ce code sur le réseau NTY Starnet.`,time:now(),date:today()});
+  save();closeModal();
+  showModal(`<div style="text-align:center;padding:10px">
+    <div style="font-size:48px;margin-bottom:12px">🎉</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:8px">Ticket envoyé !</div>
+    <div class="ticket-box" style="margin-bottom:12px"><div class="ticket-code">${next}</div></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Envoyé à <strong>${pay.client}</strong></div>
+    <button class="btn btn-primary" onclick="closeModal();aPage('paiements',null)">OK</button>
+  </div>`);
+}
+
+function rejectConfirm(){
+  showModal(`<div class="modal-title">Refuser le paiement <button class="modal-close" onclick="closeModal()">×</button></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Voulez-vous refuser ce paiement ? Le client sera notifié.</div>
+    <label class="inp-label">Motif du refus (optionnel)</label>
+    <input class="inp" type="text" id="reject-reason" placeholder="Ex: Référence incorrecte">
+    <button class="btn btn-danger" onclick="doReject()">✗ Confirmer le refus</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>`);
+}
+
+function doReject(){
+  const pay=DB.payments.find(p=>p.id===curPayId);
+  const c=DB.users.find(u=>u.id===pay.clientId);
+  const reason=document.getElementById('reject-reason')?.value||'';
+  pay.status='rejected';
+  if(!DB.messages[c.id])DB.messages[c.id]=[];
+  DB.messages[c.id].push({from:'admin',name:'Admin',text:`❌ Votre paiement du ${fmtDate(pay.date)} a été refusé.${reason?' Motif: '+reason:''} Veuillez nous recontacter.`,time:now(),date:today()});
+  save();closeModal();aPage('paiements',null);
+}
+
+// ═══════════════ ADMIN DETAIL CLIENT ═══════════════
+function openDetail(id){
+  curDetailId=id;
+  const c=DB.users.find(u=>u.id===id);
+  const free=c.tickets.filter(t=>!c.usedTickets.includes(t)).length;
+  const dl=daysLeft(c.exp);
+  let html=`<div class="modal-title">${c.name} <button class="modal-close" onclick="closeModal()">×</button></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <div class="avatar" style="width:48px;height:48px;border-radius:14px;font-size:16px">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+    <div>
+      <div style="font-size:15px;font-weight:700">${c.name}</div>
+      <div style="font-size:12px;color:var(--text3)">@${c.username} · ${c.phone||'—'}</div>
+    </div>
+    <span class="badge badge-${c.status||'pending'}" style="margin-left:auto">${{active:'Actif',expired:'Expiré',pending:'En attente'}[c.status||'pending']}</span>
+  </div>
+
+  <div class="tabs" style="margin-bottom:14px">
+    <button class="tab active" onclick="detailTab('info',this)">Infos</button>
+    <button class="tab" onclick="detailTab('tickets',this)">Tickets</button>
+    <button class="tab" onclick="detailTab('edit',this)">Modifier</button>
+  </div>
+
+  <div id="detail-info">
+    ${[['Plan',c.plan||'—'],['Prix',c.planPrice?c.planPrice+' Ar/mois':'—'],['Expiration',fmtDate(c.exp)],['Jours restants',dl!==null&&dl>=0?dl+' jours':'—'],['Tickets disponibles',free+' / '+c.tickets.length],['Membre depuis',fmtDate(c.joinDate)]].map(([k,v])=>`<div class="info-row"><div class="info-key">${k}</div><div class="info-val">${v}</div></div>`).join('')}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-success" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="quickStatus('${id}','active')">✓ Activer</button>
+      <button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="quickStatus('${id}','expired')">✗ Expirer</button>
+    </div>
+    <button class="btn btn-danger" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2)" onclick="deleteClient('${id}')">🗑 Supprimer ce client</button>
+  </div>
+
+  <div id="detail-tickets" style="display:none">
+    <div style="margin-bottom:10px">
+      <label class="inp-label">Ajouter des tickets (un par ligne)</label>
+      <textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea>
+      <button class="btn btn-success" onclick="addMoreTickets('${id}')">+ Ajouter ces tickets</button>
+    </div>
+    <div id="ticket-list-detail">`;
+  c.tickets.forEach((t,i)=>{
+    const used=c.usedTickets.includes(t);const cur=t===c.currentTicket;
+    html+=`<div class="ticket-item ${used?'ticket-used':''}">
+      <span style="font-family:var(--mono);font-size:12px">${i+1}. ${t}</span>
+      <span class="tag ${cur?'tag-cur':used?'tag-used':'tag-free'}">${cur?'Actuel':used?'Utilisé':'Dispo'}</span>
+    </div>`;
+  });
+  if(!c.tickets.length)html+=`<div class="empty"><div class="empty-icon">🎫</div>Aucun ticket</div>`;
+  html+=`</div></div>
+
+  <div id="detail-edit" style="display:none">
+    <label class="inp-label">Nom complet</label>
+    <input class="inp" type="text" id="edit-name" value="${c.name}">
+    <label class="inp-label">Username</label>
+    <input class="inp" type="text" id="edit-user" value="${c.username}">
+    <label class="inp-label">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+    <input class="inp" type="password" id="edit-pass" placeholder="Nouveau mot de passe">
+    <label class="inp-label">Téléphone</label>
+    <input class="inp" type="tel" id="edit-phone" value="${c.phone||''}">
+    <label class="inp-label">Plan</label>
+    <select class="inp" id="edit-plan">
+      ${['100 Go','200 Go','Illimité 5 appareils','Illimité 9+ appareils'].map(p=>`<option ${c.plan===p?'selected':''}>${p}</option>`).join('')}
+    </select>
+    <button class="btn btn-primary" onclick="saveClientEdit('${id}')">💾 Enregistrer</button>
+  </div>`;
+  showModal(html);
+}
+
+function detailTab(tab,btn){
+  document.querySelectorAll('#modal-content .tab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  ['info','tickets','edit'].forEach(t=>{const el=document.getElementById('detail-'+t);if(el)el.style.display=t===tab?'block':'none';});
+}
+
+function quickStatus(id,status){
+  const c=DB.users.find(u=>u.id===id);
+  if(c){c.status=status;save();}
+  closeModal();renderAdminClients();renderAdminDashboard();
+}
+
+function deleteClient(id){
+  const c=DB.users.find(u=>u.id===id);
+  if(!confirm(`Supprimer "${c.name}" ? Cette action est irréversible.`))return;
+  DB.users=DB.users.filter(u=>u.id!==id);
+  DB.payments=DB.payments.filter(p=>p.clientId!==id);
+  delete DB.messages[id];
+  save();closeModal();renderAdminClients();
+}
+
+function addMoreTickets(id){
+  const raw=document.getElementById('new-tickets-inp')?.value.trim();
+  if(!raw){alert('Entrez au moins un ticket.');return;}
+  const c=DB.users.find(u=>u.id===id);
+  const newT=raw.split('\n').map(t=>t.trim()).filter(t=>t);
+  c.tickets.push(...newT);
+  document.getElementById('new-tickets-inp').value='';
+  save();
+  const el=document.getElementById('ticket-list-detail');
+  if(el){
+    el.innerHTML='';
+    c.tickets.forEach((t,i)=>{
+      const used=c.usedTickets.includes(t);const cur=t===c.currentTicket;
+      el.innerHTML+=`<div class="ticket-item ${used?'ticket-used':''}"><span style="font-family:var(--mono);font-size:12px">${i+1}. ${t}</span><span class="tag ${cur?'tag-cur':used?'tag-used':'tag-free'}">${cur?'Actuel':used?'Utilisé':'Dispo'}</span></div>`;
+    });
+  }
+  alert(`✅ ${newT.length} ticket(s) ajouté(s) !`);
+}
+
+function saveClientEdit(id){
+  const c=DB.users.find(u=>u.id===id);
+  const newUser=document.getElementById('edit-user').value.trim().toLowerCase();
+  if(DB.users.find(u=>u.id!==id&&u.username===newUser)){alert('Ce username existe déjà.');return;}
+  c.name=document.getElementById('edit-name').value.trim()||c.name;
+  c.username=newUser||c.username;
+  c.phone=document.getElementById('edit-phone').value.trim();
+  c.plan=document.getElementById('edit-plan').value;
+  c.planPrice=DB.settings.planPrices[c.plan]||c.planPrice;
+  const np=document.getElementById('edit-pass').value;
+  if(np){if(np.length<4){alert('Mot de passe trop court');return;}c.password=np;}
+  save();closeModal();
+  showModal(`<div style="text-align:center;padding:10px">
+    <div style="font-size:40px;margin-bottom:12px">✅</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Client modifié !</div>
+    ${np?`<div style="font-size:13px;color:var(--text2);margin-bottom:4px">Nouveau mot de passe: <strong>${np}</strong></div>`:''}
+    <button class="btn btn-primary" style="margin-top:12px" onclick="closeModal();renderAdminClients()">OK</button>
+  </div>`);
+}
+
+// ═══════════════ ADD CLIENT ═══════════════
+function showAddClient(){
+  showModal(`<div class="modal-title">Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div>
+    <label class="inp-label">Nom complet *</label>
+    <input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean">
+    <label class="inp-label">Username * (pour se connecter)</label>
+    <input class="inp" type="text" id="n-user" placeholder="Ex: rakoto">
+    <label class="inp-label">Mot de passe *</label>
+    <input class="inp" type="password" id="n-pass" placeholder="Choisir un mot de passe">
+    <label class="inp-label">Téléphone</label>
+    <input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX">
+    <label class="inp-label">Plan</label>
+    <select class="inp" id="n-plan">
+      <option>100 Go</option><option>200 Go</option><option>Illimité 5 appareils</option><option>Illimité 9+ appareils</option>
+    </select>
+    <label class="inp-label">Tickets Mikrotik (un par ligne) *</label>
+    <textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;GHI789-RST&#10;..."></textarea>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Les tickets seront envoyés un par un à chaque paiement validé.</div>
+    <button class="btn btn-primary" onclick="addClient()">✓ Créer le client</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>`);
+}
+
+function addClient(){
+  const name=document.getElementById('n-name').value.trim();
+  const user=document.getElementById('n-user').value.trim().toLowerCase();
+  const pass=document.getElementById('n-pass').value;
+  const phone=document.getElementById('n-phone').value.trim();
+  const plan=document.getElementById('n-plan').value;
+  const raw=document.getElementById('n-tickets').value.trim();
+  if(!name||!user||!pass){alert('Remplissez nom, username et mot de passe.');return;}
+  if(!raw){alert('Ajoutez au moins un ticket Mikrotik.');return;}
+  if(DB.users.find(u=>u.username===user)){alert('Ce username existe déjà.');return;}
+  const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
+  const id='c'+Date.now();
+  DB.users.push({id,username:user,password:pass,name,role:'client',status:'pending',plan,planPrice:DB.settings.planPrices[plan]||'—',phone,tickets,usedTickets:[],currentTicket:null,joinDate:today()});
+  DB.messages[id]=[];
+  save();closeModal();
+  showModal(`<div style="text-align:center;padding:10px">
+    <div style="font-size:48px;margin-bottom:12px">🎉</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:12px">Client créé !</div>
+    <div class="card" style="text-align:left;margin-bottom:12px">
+      <div class="info-row"><div class="info-key">Nom</div><div class="info-val">${name}</div></div>
+      <div class="info-row"><div class="info-key">Username</div><div class="info-val" style="font-family:var(--mono)">${user}</div></div>
+      <div class="info-row"><div class="info-key">Mot de passe</div><div class="info-val" style="font-family:var(--mono)">${pass}</div></div>
+      <div class="info-row"><div class="info-key">Tickets</div><div class="info-val">${tickets.length} ticket(s)</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="closeModal();renderAdminClients()">OK</button>
+  </div>`);
+}
+
+// ═══════════════ ADMIN MESSAGES ═══════════════
+function renderAdminMessages(){
+  const clients=DB.users.filter(u=>u.role==='client');
+  let html=`<div style="font-size:20px;font-weight:700;margin-bottom:14px">Messages</div>`;
+  if(!clients.length){html+=`<div class="empty"><div class="empty-icon">💬</div>Aucun client</div>`;}
+  else clients.forEach(c=>{
+    const msgs=DB.messages[c.id]||[];
+    const last=msgs[msgs.length-1];
+    const unread=msgs.filter(m=>m.from==='client').length;
+    html+=`<div class="card" style="cursor:pointer" onclick="openAdminChat('${c.id}')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px">${c.name}</div>
+          <div style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${last?last.text:'Pas encore de messages'}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${last?`<div style="font-size:10px;color:var(--text3)">${last.time}</div>`:''}
+          <span class="badge badge-${c.status||'pending'}" style="font-size:9px;padding:2px 7px;margin-top:4px">${{active:'Actif',expired:'Expiré',pending:'En attente'}[c.status||'pending']}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('a-content').innerHTML=html;
+}
+
+function openAdminChat(clientId){
+  curChatId=clientId;
+  const c=DB.users.find(u=>u.id===clientId);
+  const msgs=DB.messages[clientId]||[];
+  let html=`<div class="modal-title">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar" style="width:32px;height:32px;border-radius:8px;font-size:11px">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div><div style="font-size:15px">${c.name}</div><div style="font-size:10px;color:var(--text3)">@${c.username}</div></div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">×</button>
+  </div>
+  <div class="msg-list" id="admin-msg-list" style="max-height:300px">`;
+  if(!msgs.length)html+=`<div class="empty"><div class="empty-icon">💬</div>Pas encore de messages</div>`;
+  else msgs.forEach(m=>{
+    const mine=m.from==='admin';
+    html+=`<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'}">
+      ${!mine?`<div style="font-size:10px;color:var(--text3);margin-bottom:2px">${m.name}</div>`:''}
+      <div class="bubble bubble-${mine?'sent':'recv'}">${m.text.replace(/\n/g,'<br>')}</div>
+      <div class="msg-meta" style="text-align:${mine?'right':'left'}">${m.time}</div>
+    </div>`;
+  });
+  html+=`</div>
+  <div class="chat-inp-row">
+    <input class="inp" type="text" id="a-msg-inp" placeholder="Répondre à ${c.name}..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')aSendMsg()">
+    <button class="btn btn-primary btn-sm" onclick="aSendMsg()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>`;
+  showModal(html);
+  setTimeout(()=>{const el=document.getElementById('admin-msg-list');if(el)el.scrollTop=el.scrollHeight;},100);
+}
+
+function aSendMsg(){
+  const inp=document.getElementById('a-msg-inp');
+  if(!inp||!inp.value.trim())return;
+  if(!DB.messages[curChatId])DB.messages[curChatId]=[];
+  DB.messages[curChatId].push({from:'admin',name:'Admin',text:inp.value.trim(),time:now(),date:today()});
+  inp.value='';save();
+  openAdminChat(curChatId);
+}
+
+// ═══════════════ ADMIN STATS ═══════════════
+function renderAdminStats(){
+  const clients=DB.users.filter(u=>u.role==='client');
+  const pays=DB.payments;
+  const validated=pays.filter(p=>p.status==='validated');
+  const revenue=validated.reduce((s,p)=>s+(parseInt(p.amount?.replace('.',''))||0),0);
+  const planCount={};
+  clients.forEach(c=>{if(c.plan)planCount[c.plan]=(planCount[c.plan]||0)+1;});
+
+  let html=`<div style="font-size:20px;font-weight:700;margin-bottom:16px">Statistiques</div>
+  <div class="revenue-card">
+    <div class="card-title" style="color:var(--gold)">💰 Revenus totaux</div>
+    <div class="revenue-num">${revenue.toLocaleString('fr')} Ar</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:4px">${validated.length} paiements validés</div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${clients.length}</div><div class="stat-lbl">Total clients</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--success)">${clients.filter(c=>c.status==='active').length}</div><div class="stat-lbl">Actifs</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--warning)">${pays.filter(p=>p.status==='pending').length}</div><div class="stat-lbl">Paiements en attente</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--purple)">${pays.length}</div><div class="stat-lbl">Total paiements</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Répartition des clients</div>`;
+  const total=clients.length||1;
+  [{label:'Actifs',val:clients.filter(c=>c.status==='active').length,color:'var(--success)'},
+   {label:'En attente',val:clients.filter(c=>c.status==='pending').length,color:'var(--warning)'},
+   {label:'Expirés',val:clients.filter(c=>c.status==='expired').length,color:'var(--danger)'}].forEach(s=>{
+    const pct=Math.round(s.val/total*100);
+    html+=`<div class="progress-wrap">
+      <div class="progress-label"><span style="color:var(--text2)">${s.label}</span><span style="font-family:var(--mono)">${s.val} (${pct}%)</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${s.color}"></div></div>
+    </div>`;
+  });
+  html+=`</div><div class="card"><div class="card-title">Répartition par plan</div>`;
+  Object.entries(planCount).forEach(([plan,count])=>{
+    const pct=Math.round(count/total*100);
+    html+=`<div class="progress-wrap">
+      <div class="progress-label"><span style="color:var(--text2)">${plan}</span><span style="font-family:var(--mono)">${count} client${count>1?'s':''}</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+    </div>`;
+  });
+  html+=`</div>
+  <div class="card">
+    <div class="card-title">Changer mon mot de passe admin</div>
+    <button class="btn btn-ghost" onclick="showChangePass()">🔐 Modifier le mot de passe</button>
+  </div>`;
+  document.getElementById('a-content').innerHTML=html;
+}
+</script>
+<div id="install-btn" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:30px;padding:10px 20px;cursor:pointer;box-shadow:0 4px 20px rgba(59,130,246,0.4);align-items:center;gap:8px;font-family:var(--font);font-size:13px;font-weight:600;color:white;border:none;white-space:nowrap" onclick="installApp()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  Installer l'application
+</div>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+// PWA Install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-btn').style.display = 'flex';
+});
+function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; document.getElementById('install-btn').style.display='none'; });
+  }
+}
+</script>
+</body>
+</html>
