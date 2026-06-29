@@ -5,149 +5,318 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#030712">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NTY Starnet">
 <link rel="manifest" href="/manifest.json">
-<title>NTY Starnet — WiFi Manager</title>
+<title>NTY Starnet — WiFi Manager Pro</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#030712;--bg2:#060f1f;--bg3:#0a1628;--card:#0d1f38;--card2:#112240;
+  --bg:#030712;--bg2:#060f1f;--card:#0d1f38;--card2:#112240;
   --border:rgba(99,179,255,0.12);--border2:rgba(99,179,255,0.25);
-  --accent:#3b82f6;--accent2:#60a5fa;--accent3:#93c5fd;
-  --gold:#f59e0b;--gold2:#fbbf24;
+  --accent:#3b82f6;--accent2:#60a5fa;
   --success:#10b981;--danger:#ef4444;--warning:#f59e0b;--purple:#8b5cf6;
   --text:#f0f9ff;--text2:#94a3b8;--text3:#475569;
-  --glow:0 0 30px rgba(59,130,246,0.15);
   --font:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
   --r:12px;--r2:16px;--r3:24px;
 }
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-.page{display:none;min-height:100vh}
-.page.active{display:block}
+.page{display:none;min-height:100vh}.page.active{display:block}
 .stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,3s) ease-in-out infinite var(--delay,0s)}
 @keyframes twinkle{0%,100%{opacity:0.1}50%{opacity:var(--op,0.6)}}
-.login-wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-.login-glow{position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:400px;height:400px;background:radial-gradient(ellipse,rgba(59,130,246,0.15) 0%,transparent 70%);pointer-events:none}
-.logo-wrap{text-align:center;margin-bottom:32px}
-.logo-svg-wrap{width:80px;height:80px;margin:0 auto 16px;position:relative}
-.logo-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--border2);animation:spin 8s linear infinite}
-.logo-ring2{position:absolute;inset:6px;border-radius:50%;border:1px solid rgba(99,179,255,0.1);animation:spin 12s linear infinite reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
-.logo-inner{position:absolute;inset:12px;background:linear-gradient(135deg,#0d1f38,#1a3a6e);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(59,130,246,0.3)}
-.logo-name{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#60a5fa,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-sub{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--text3);margin-top:4px}
-.logo-tagline{font-size:13px;color:var(--text2);margin-top:8px}
-.login-card{background:linear-gradient(135deg,rgba(13,31,56,0.9),rgba(17,34,64,0.9));border:1px solid var(--border2);border-radius:var(--r3);padding:28px;width:100%;max-width:380px;backdrop-filter:blur(20px);box-shadow:var(--glow),0 25px 50px rgba(0,0,0,0.5)}
-.form-label{font-size:12px;font-weight:600;letter-spacing:0.05em;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase}
-.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(6,15,31,0.8);color:var(--text);margin-bottom:14px;outline:none;font-family:var(--font);transition:border-color .2s}
-.form-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
-.btn-login{width:100%;padding:14px;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:var(--font);transition:all .2s;box-shadow:0 4px 20px rgba(59,130,246,0.3)}
-.btn-login:disabled{opacity:0.7;cursor:not-allowed}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.35s ease}
+
+/* LOGIN */
+.login-wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-glow{position:fixed;top:-150px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(ellipse,rgba(59,130,246,0.1) 0%,transparent 70%);pointer-events:none}
+.logo-wrap{text-align:center;margin-bottom:32px}
+.logo-ring-wrap{width:90px;height:90px;margin:0 auto 18px;position:relative}
+.logo-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--border2);animation:spin 8s linear infinite}
+.logo-ring2{position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(99,179,255,0.1);animation:spin 14s linear infinite reverse}
+.logo-inner{position:absolute;inset:14px;background:linear-gradient(135deg,#0a1628,#1a3a6e);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(59,130,246,0.3)}
+.logo-name{font-family:var(--mono);font-size:28px;font-weight:700;letter-spacing:4px;background:linear-gradient(135deg,#60a5fa,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--text3);margin-top:6px}
+.logo-tagline{font-size:14px;color:var(--text2);margin-top:10px;font-style:italic}
+.login-card{background:linear-gradient(135deg,rgba(13,31,56,0.95),rgba(17,34,64,0.95));border:1px solid var(--border2);border-radius:var(--r3);padding:32px;width:100%;max-width:390px;backdrop-filter:blur(20px);box-shadow:0 0 40px rgba(59,130,246,0.08),0 25px 60px rgba(0,0,0,0.6)}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.form-label{font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text2);margin-bottom:7px;display:block;text-transform:uppercase}
+.form-input{width:100%;padding:13px 16px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(3,7,18,0.7);color:var(--text);margin-bottom:16px;outline:none;font-family:var(--font);transition:all .2s}
+.form-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(59,130,246,0.12)}
+.pass-wrap{position:relative;margin-bottom:16px}
+.pass-wrap .form-input{margin-bottom:0;padding-right:48px}
+.eye-btn{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px}
+.login-err{display:none;align-items:center;gap:8px;padding:11px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--r);margin-bottom:14px;font-size:13px;color:#f87171}
+.btn-login{width:100%;padding:15px;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:var(--font);transition:all .2s;box-shadow:0 6px 24px rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(59,130,246,0.4)}
+.btn-login:disabled{opacity:0.7;cursor:not-allowed;transform:none}
+.btn-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.login-footer{text-align:center;font-size:12px;color:var(--text3);margin-top:24px}
+
+/* LAYOUT */
 .app-wrap{position:relative;z-index:1;max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:80px}
-.topbar{position:sticky;top:0;z-index:50;background:rgba(3,7,18,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(3,7,18,0.92);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
 .topbar-logo{display:flex;align-items:center;gap:10px}
-.topbar-icon{width:32px;height:32px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2)}
+.topbar-icon{width:34px;height:34px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);border-radius:9px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2)}
 .topbar-name{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .topbar-role{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.deco-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:12px;font-family:var(--font);transition:all .15s}
+.deco-btn:hover{border-color:var(--border2);color:var(--text2)}
 .content{padding:16px}
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(6,15,31,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:50;padding:8px 0 12px}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:10px;font-family:var(--font);letter-spacing:0.05em;text-transform:uppercase;transition:color .2s;position:relative}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(3,7,18,0.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;z-index:50;padding:8px 0 14px}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:9px;font-family:var(--font);letter-spacing:0.06em;text-transform:uppercase;transition:color .2s;position:relative}
 .nav-btn.active{color:var(--accent2)}
 .nav-dot{position:absolute;top:4px;right:calc(50% - 14px);width:7px;height:7px;background:var(--danger);border-radius:50%;border:2px solid var(--bg);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,179,255,0.3),transparent)}
-.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:12px}
-.status-card{background:linear-gradient(135deg,var(--card),var(--card2));border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:12px;position:relative;overflow:hidden}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.stat-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center}
-.stat-num{font-family:var(--mono);font-size:28px;font-weight:700;line-height:1}
-.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-top:4px}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* NOTIFICATIONS */
+.notif-card{display:flex;gap:12px;padding:14px;border-radius:var(--r);margin-bottom:10px;border:1px solid;align-items:flex-start}
+.notif-info{background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2)}
+.notif-warning{background:rgba(245,158,11,0.07);border-color:rgba(245,158,11,0.25)}
+.notif-danger{background:rgba(239,68,68,0.07);border-color:rgba(239,68,68,0.25)}
+.notif-success{background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.2)}
+.notif-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.notif-body{flex:1}
+.notif-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.notif-info .notif-title{color:var(--accent2)}
+.notif-warning .notif-title{color:#fbbf24}
+.notif-danger .notif-title{color:#f87171}
+.notif-success .notif-title{color:#34d399}
+.notif-msg{font-size:12px;color:var(--text2);line-height:1.6}
+
+/* HERO CARD */
+.hero-card{background:linear-gradient(135deg,#0a1628,#112240);border:1px solid var(--border2);border-radius:20px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+.hero-card::before{content:'';position:absolute;top:-40%;right:-15%;width:200px;height:200px;background:radial-gradient(ellipse,rgba(59,130,246,0.07),transparent);pointer-events:none}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.hero-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:6px}
+.hero-right{text-align:right}
+.hero-plan{font-weight:700;font-size:16px}
+.hero-price{font-size:12px;color:var(--text3)}
+.hero-mid{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
+.hero-exp{font-weight:600;font-size:13px;line-height:1.4}
+.hero-days-wrap{text-align:right}
+.hero-days{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1}
+.expiry-track{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:16px}
+.expiry-fill{height:100%;border-radius:2px;transition:width 1s}
+
+/* TICKET */
+.ticket-card{background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(99,102,241,0.06));border:1px solid var(--border2);border-radius:var(--r2);padding:20px;text-align:center;margin-bottom:12px}
+.ticket-label{font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);margin-bottom:10px}
+.ticket-code{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--accent2);letter-spacing:3px;word-break:break-all;text-shadow:0 0 20px rgba(96,165,250,0.3)}
+.ticket-valid{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat-pill{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 8px;text-align:center}
+.stat-pill-num{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2)}
+.stat-pill-lbl{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em}
+
+/* CARDS */
+.section-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.section-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,179,255,0.2),transparent)}
+.section-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);margin-bottom:14px}
+.section-head-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.count-badge{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.2);font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
 .badge-active{background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.2)}
 .badge-expired{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
 .badge-pending{background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)}
 .badge-validated{background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.2)}
 .badge-rejected{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
-.btn{width:100%;padding:12px;border-radius:var(--r);border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font);transition:all .15s;margin-bottom:8px}
-.btn:active{transform:scale(0.97)}
-.btn:disabled{opacity:0.6;cursor:not-allowed}
-.btn-primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;box-shadow:0 4px 15px rgba(59,130,246,0.25)}
+
+/* BUTTONS */
+.btn{width:100%;padding:12px 16px;border-radius:var(--r);border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font);transition:all .15s;margin-bottom:8px}
+.btn:active{transform:scale(0.97)}.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-full{width:100%}.btn-sm{padding:9px 14px;font-size:13px;width:auto;margin:0}
+.btn-primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;box-shadow:0 4px 16px rgba(59,130,246,0.25)}
 .btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
 .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
-.btn-sm{padding:8px 14px;font-size:13px;width:auto;margin:0}
-.inp{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(6,15,31,0.6);color:var(--text);margin-bottom:10px;outline:none;font-family:var(--font);transition:border-color .2s}
+.btn-ghost{background:rgba(255,255,255,0.04);border:1px solid var(--border2);color:var(--text2)}
+
+/* INPUTS */
+.inp{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(3,7,18,0.6);color:var(--text);margin-bottom:10px;outline:none;font-family:var(--font);transition:all .2s}
 .inp:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(59,130,246,0.08)}
-.inp-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block}
-textarea.inp{resize:vertical;min-height:80px}
-select.inp{cursor:pointer}
-.ticket-box{background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(99,102,241,0.08));border:1px solid var(--border2);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:12px}
-.ticket-code{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2);letter-spacing:3px;word-break:break-all;margin-top:6px}
-.plan-card{border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative}
+.inp-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block}
+textarea.inp{resize:vertical;min-height:80px}select.inp{cursor:pointer}
+
+/* GREETING */
+.greeting{margin-bottom:16px}
+.greeting-text{font-size:14px;color:var(--text2)}
+.greeting-name{font-size:24px;font-weight:700;background:linear-gradient(135deg,var(--text),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* HISTORY */
+.history-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.history-row:last-child{border-bottom:none}
+.history-left{display:flex;align-items:center;gap:10px}
+.history-icon{font-size:20px}
+.history-plan{font-size:13px;font-weight:600}
+.history-date{font-size:11px;color:var(--text3);margin-top:2px}
+.history-right{text-align:right}
+.history-amount{font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:4px}
+
+/* PAGE HEADERS */
+.page-header{margin-bottom:16px}
+.page-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.page-title{font-size:22px;font-weight:700}
+.page-sub{font-size:13px;color:var(--text2);margin-top:2px}
+
+/* PAY BOX */
+.pay-box{background:linear-gradient(135deg,rgba(16,185,129,0.07),rgba(5,150,105,0.05));border:1px solid rgba(16,185,129,0.2);border-radius:var(--r2);padding:18px;margin-bottom:14px}
+.pay-box-title{font-size:12px;font-weight:700;color:#34d399;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em}
+.pay-nums{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.pay-num{font-family:var(--mono);font-size:17px;font-weight:700;color:#34d399}
+.pay-box-sub{font-size:12px;color:var(--text3)}
+
+/* PLAN CARDS */
+.plan-card{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative}
 .plan-card.selected{border-color:var(--accent);border-width:2px;background:rgba(59,130,246,0.07)}
-.plan-card.selected::before{content:'✓';position:absolute;top:8px;right:10px;color:var(--accent2);font-weight:700}
-.pay-box{background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:var(--r2);padding:16px;margin-bottom:14px}
-.pay-num{font-family:var(--mono);font-size:16px;font-weight:700;color:#34d399;display:block;margin:3px 0}
-.upload-zone{border:1.5px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;color:var(--text3);font-size:13px;margin-bottom:10px;transition:all .2s}
-.msg-list{padding:12px;min-height:200px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:320px}
+.plan-card.selected::after{content:'✓';position:absolute;top:10px;right:12px;color:var(--accent2);font-weight:700;font-size:16px}
+.plan-icon{font-size:24px;flex-shrink:0}
+.plan-info{flex:1}
+.plan-name{font-weight:600;font-size:14px}
+.plan-desc{font-size:11px;color:var(--text3);margin-top:2px}
+.plan-price{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent2);flex-shrink:0}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed var(--border2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px}
+.upload-zone:hover{border-color:var(--accent2);background:rgba(59,130,246,0.04)}
+.upload-icon{font-size:32px;margin-bottom:8px}
+.upload-text{font-size:13px;color:var(--text2)}
+.upload-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* CHAT */
+.chat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.chat-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--card2)}
+.chat-avatar{font-size:24px}
+.chat-name{font-weight:600;font-size:14px}
+.chat-status{font-size:11px;color:var(--success);margin-top:2px}
+.msg-list{padding:14px;min-height:220px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:320px}
+.msg-wrap{display:flex;flex-direction:column}
+.msg-sent{align-items:flex-end}.msg-recv{align-items:flex-start}
 .bubble{padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;max-width:82%;word-break:break-word}
-.bubble-sent{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
-.bubble-recv{background:var(--card2);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:4px;align-self:flex-start}
-.msg-meta{font-size:10px;color:var(--text3);margin-top:3px}
-.chat-inp-row{border-top:1px solid var(--border);padding:10px 12px;display:flex;gap:8px;align-items:center}
-.client-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
-.client-row:last-child{border-bottom:none}
-.avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent2);flex-shrink:0;border:1px solid var(--border2)}
-.ticket-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(6,15,31,0.6);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)}
-.ticket-used{opacity:.35;text-decoration:line-through}
-.tag{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600}
-.tag-used{background:rgba(239,68,68,0.12);color:#f87171}
-.tag-free{background:rgba(16,185,129,0.12);color:#34d399}
-.tag-cur{background:rgba(59,130,246,0.15);color:var(--accent2)}
-.notif-bar{display:flex;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:8px;font-size:13px;align-items:flex-start;border:1px solid}
-.notif-success{background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.2);color:#34d399}
-.notif-warning{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);color:#fbbf24}
-.notif-info{background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--accent2)}
-.notif-danger{background:rgba(239,68,68,0.06);border-color:rgba(239,68,68,0.2);color:#f87171}
-.divider{height:1px;background:var(--border);margin:14px 0}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
-.modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--r3) var(--r3) 0 0;padding:24px;width:100%;max-width:430px;max-height:88vh;overflow-y:auto}
-.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:22px;line-height:1;padding:0}
-.progress-wrap{margin-bottom:14px}
-.progress-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px}
-.progress-bar{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
-.progress-fill{height:100%;border-radius:3px}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.section-title{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em}
-.pay-row{padding:12px 0;border-bottom:1px solid var(--border)}
-.pay-row:last-child{border-bottom:none}
-.back-btn{background:none;border:none;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:6px;font-size:14px;font-family:var(--font);padding:0;margin-bottom:14px;font-weight:500}
-.expiry-bar{height:4px;border-radius:2px;margin-top:8px;background:rgba(255,255,255,0.06);overflow:hidden}
-.expiry-fill{height:100%;border-radius:2px}
-.search-wrap{position:relative;margin-bottom:12px}
-.search-inp{width:100%;padding:11px 14px 11px 38px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(6,15,31,0.6);color:var(--text);outline:none;font-family:var(--font)}
-.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3)}
-.tabs{display:flex;gap:4px;background:rgba(6,15,31,0.6);border-radius:var(--r);padding:4px;margin-bottom:16px;border:1px solid var(--border)}
-.tab{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);text-transform:uppercase;transition:all .15s}
-.tab.active{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
-.revenue-card{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,6,0.05));border:1px solid rgba(245,158,11,0.2);border-radius:var(--r2);padding:16px;margin-bottom:12px}
-.revenue-num{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--gold2)}
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.bubble-sent{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border-bottom-right-radius:4px}
+.bubble-recv{background:var(--card2);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg-time{font-size:10px;color:var(--text3);margin-top:4px}
+.chat-inp{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--card2)}
+.chat-inp-field{flex:1;background:rgba(3,7,18,0.6);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--text);font-size:13px;outline:none;font-family:var(--font)}
+.chat-inp-field:focus{border-color:var(--accent2)}
+.chat-send-btn{background:linear-gradient(135deg,#3b82f6,#6366f1);border:none;border-radius:var(--r);padding:10px 18px;color:#fff;cursor:pointer;font-size:16px;font-weight:700;transition:transform .15s}
+.chat-send-btn:active{transform:scale(0.93)}
+
+/* PROFILE */
+.profile-hero{text-align:center;padding:24px 16px;margin-bottom:12px}
+.profile-avatar{width:80px;height:80px;border-radius:22px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;font-weight:700;color:var(--accent2);font-family:var(--mono);border:2px solid var(--border2);box-shadow:0 0 24px rgba(59,130,246,0.15)}
+.profile-name{font-size:20px;font-weight:700;margin-bottom:4px}
+.profile-username{font-size:13px;color:var(--text2);margin-bottom:10px}
+
+/* INFO */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
 .info-row:last-child{border-bottom:none}
 .info-key{font-size:12px;color:var(--text3)}
-.info-val{font-size:13px;font-weight:500}
-.empty{text-align:center;padding:32px 16px;color:var(--text3);font-size:13px}
-.empty-icon{font-size:36px;margin-bottom:10px;opacity:0.4}
-.loading{text-align:center;padding:40px;color:var(--text3)}
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.fade-up{animation:fadeUp 0.3s ease}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.info-val{font-size:13px;font-weight:500;text-align:right}
+.info-box{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+
+/* ADMIN */
+.revenue-hero{background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(217,119,6,0.06));border:1px solid rgba(245,158,11,0.2);border-radius:var(--r2);padding:20px;margin-bottom:12px}
+.revenue-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#f59e0b;margin-bottom:8px}
+.revenue-amount{font-family:var(--mono);font-size:34px;font-weight:700;color:#fbbf24;line-height:1}
+.revenue-amount span{font-size:18px;color:#f59e0b}
+.revenue-sub{font-size:12px;color:var(--text3);margin-top:6px}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.stat-card-admin{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center}
+.stat-card-num{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1}
+.stat-card-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-top:5px}
+.pay-item{padding:12px 0;border-bottom:1px solid var(--border)}
+.pay-item:last-child{border-bottom:none}
+.pay-item-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.pay-item-name{font-weight:700;font-size:14px}
+.pay-item-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.pay-item-ticket{font-size:12px;color:var(--success);margin-top:4px}
+.pay-item-notick{font-size:12px;color:var(--danger);margin-top:4px}
+.pay-item-amount{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--accent2)}
+.pay-item-btns{display:flex;gap:8px}
+.client-list{display:flex;flex-direction:column;gap:8px}
+.client-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s}
+.client-card:hover{border-color:var(--border2)}
+.client-avatar{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent2);flex-shrink:0;border:1px solid var(--border2)}
+.client-info{flex:1;min-width:0}
+.client-name{font-weight:600;font-size:14px}
+.client-meta{font-size:11px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.client-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.client-arrow{color:var(--text3);font-size:18px}
+.filter-tabs{display:flex;gap:4px;background:rgba(3,7,18,0.6);border-radius:var(--r);padding:4px;margin-bottom:16px;border:1px solid var(--border)}
+.ftab{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);text-transform:uppercase;font-family:var(--font);transition:all .15s}
+.ftab.active{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
+.pay-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:10px}
+.pay-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.pay-card-name{font-weight:700;font-size:15px}
+.pay-card-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.pay-card-ref{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+.pay-card-right{text-align:right}
+.pay-card-amount{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--accent2);margin-bottom:5px}
+.pay-card-btns{display:flex;gap:8px;margin-top:10px}
+.ticket-preview{font-size:12px;color:var(--success);padding:8px 12px;background:rgba(16,185,129,0.06);border-radius:8px;margin-bottom:8px}
+.ticket-preview-big{background:rgba(59,130,246,0.07);border:1px solid var(--border2);border-radius:var(--r);padding:16px;text-align:center;margin:14px 0}
+.tp-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:8px}
+.tp-code{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2);letter-spacing:2px;word-break:break-all}
+.search-box{position:relative;margin-bottom:12px}
+.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px}
+.search-inp{width:100%;padding:11px 14px 11px 40px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:rgba(3,7,18,0.6);color:var(--text);outline:none;font-family:var(--font)}
+.search-inp:focus{border-color:var(--accent2)}
+.conv-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s}
+.conv-card:hover{border-color:var(--border2)}
+.conv-avatar{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent2);flex-shrink:0;border:1px solid var(--border2)}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-weight:600;font-size:14px}
+.conv-last{font-size:12px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-right{flex-shrink:0;text-align:right}
+.conv-time{font-size:10px;color:var(--text3);margin-top:4px}
+.prog-wrap{margin-bottom:12px}
+.prog-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px}
+.prog-val{color:var(--text2);font-family:var(--mono)}
+.prog-bar{height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .8s}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px)}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--r3) var(--r3) 0 0;padding:24px;width:100%;max-width:430px;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.5)}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:24px;line-height:1;padding:0}
+.modal-client{font-size:14px;color:var(--text2);margin-bottom:14px}
+.modal-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent2);flex-shrink:0;border:1px solid var(--border2)}
+.dtabs{display:flex;gap:4px;background:rgba(3,7,18,0.6);border-radius:var(--r);padding:4px;margin-bottom:16px;border:1px solid var(--border)}
+.dtab{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);font-family:var(--font);transition:all .15s}
+.dtab.active{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
+.ticket-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(3,7,18,0.5);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)}
+.ticket-row-code{font-family:var(--mono);font-size:12px;color:var(--text)}
+.ticket-used{opacity:.3;text-decoration:line-through}
+.tag{font-size:10px;padding:3px 9px;border-radius:10px;font-weight:600}
+.tag-free{background:rgba(16,185,129,0.12);color:#34d399}
+.tag-used{background:rgba(239,68,68,0.12);color:#f87171}
+.tag-cur{background:rgba(59,130,246,0.15);color:var(--accent2)}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border2);border-radius:var(--r);padding:12px 20px;font-size:13px;font-weight:500;color:var(--text);z-index:300;opacity:0;transition:all .3s;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-success{border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);color:#34d399}
+.toast-error{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#f87171}
+
+/* MISC */
+.loading{text-align:center;padding:48px 16px;color:var(--text3)}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+.empty{text-align:center;padding:40px 16px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:0.35}
+.empty p{font-size:14px}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 </style>
 </head>
 <body>
@@ -158,38 +327,36 @@ select.inp{cursor:pointer}
   <div class="login-glow"></div>
   <div class="login-wrap">
     <div class="logo-wrap fade-up">
-      <div class="logo-svg-wrap">
+      <div class="logo-ring-wrap">
         <div class="logo-ring"></div>
         <div class="logo-ring2"></div>
         <div class="logo-inner">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
             <path d="M5 12.55a11 11 0 0 1 14.08 0" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
             <path d="M1.42 9a16 16 0 0 1 21.16 0" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" stroke="#34d399" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="20" r="1.5" fill="#60a5fa"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="12" cy="20" r="1.8" fill="#60a5fa"/>
           </svg>
         </div>
       </div>
       <div class="logo-name">NTY STARNET</div>
       <div class="logo-sub">WiFi Manager Pro</div>
-      <div class="logo-tagline">Votre connexion, notre priorité</div>
+      <div class="logo-tagline">Votre connexion, notre priorité ✨</div>
     </div>
     <div class="login-card fade-up">
-      <div style="margin-bottom:20px">
-        <div style="font-size:18px;font-weight:700;margin-bottom:4px">Connexion</div>
-        <div style="font-size:13px;color:var(--text2)">Accédez à votre espace personnel</div>
-      </div>
+      <div class="login-title">Connexion</div>
+      <div class="login-sub">Accédez à votre espace personnel</div>
       <label class="form-label">Nom d'utilisateur</label>
       <input class="form-input" type="text" id="login-user" placeholder="Entrez votre username" autocomplete="username">
       <label class="form-label">Mot de passe</label>
-      <div style="position:relative">
-        <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px">
-        <button onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-58%);background:none;border:none;cursor:pointer;color:var(--text3)">👁</button>
+      <div class="pass-wrap">
+        <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+        <button class="eye-btn" onclick="togglePass()">👁</button>
       </div>
-      <div id="login-err" style="color:#f87171;font-size:13px;margin-bottom:10px;display:none;padding:10px;background:rgba(239,68,68,0.08);border-radius:8px">⚠️ Identifiants incorrects</div>
-      <button class="btn-login" onclick="doLogin()" id="login-btn">Se connecter →</button>
+      <div class="login-err" id="login-err">⚠️ <span class="err-msg">Identifiants incorrects</span></div>
+      <button class="btn-login" onclick="doLogin()" id="login-btn">Se connecter <span>→</span></button>
     </div>
-    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:20px">© 2026 NTY Starnet · Tous droits réservés</div>
+    <div class="login-footer">© 2026 NTY Starnet · Tous droits réservés</div>
   </div>
 </div>
 
@@ -198,29 +365,29 @@ select.inp{cursor:pointer}
   <div class="topbar">
     <div class="topbar-logo">
       <div class="topbar-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#60a5fa"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#60a5fa"/></svg>
       </div>
       <div><div class="topbar-name">NTY STARNET</div><div class="topbar-role">Espace client</div></div>
     </div>
-    <button onclick="logout()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:12px;font-family:var(--font)">Déco.</button>
+    <button class="deco-btn" onclick="logout()">Déco.</button>
   </div>
   <div class="app-wrap"><div class="content" id="c-content"></div></div>
   <div class="bottom-nav">
     <button class="nav-btn active" onclick="cPage('home',this)" id="cnav-home">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Accueil
     </button>
     <button class="nav-btn" onclick="cPage('paiement',this)" id="cnav-paiement">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Paiement
     </button>
-    <button class="nav-btn" onclick="cPage('messages',this)" id="cnav-msg">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <button class="nav-btn" onclick="cPage('messages',this)" id="cnav-messages">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Messages
       <span class="nav-dot" id="c-msg-dot" style="display:none"></span>
     </button>
     <button class="nav-btn" onclick="cPage('profil',this)" id="cnav-profil">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profil
     </button>
   </div>
@@ -231,34 +398,34 @@ select.inp{cursor:pointer}
   <div class="topbar">
     <div class="topbar-logo">
       <div class="topbar-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#60a5fa"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#60a5fa"/></svg>
       </div>
       <div><div class="topbar-name">NTY STARNET</div><div class="topbar-role">Administration</div></div>
     </div>
-    <button onclick="logout()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:12px;font-family:var(--font)">Déco.</button>
+    <button class="deco-btn" onclick="logout()">Déco.</button>
   </div>
   <div class="app-wrap"><div class="content" id="a-content"></div></div>
   <div class="bottom-nav">
     <button class="nav-btn active" onclick="aPage('dashboard',this)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Dashboard
     </button>
     <button class="nav-btn" onclick="aPage('clients',this)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Clients
     </button>
     <button class="nav-btn" onclick="aPage('paiements',this)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Paiements
       <span class="nav-dot" id="a-pay-dot" style="display:none"></span>
     </button>
     <button class="nav-btn" onclick="aPage('messages',this)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Messages
       <span class="nav-dot" id="a-msg-dot" style="display:none"></span>
     </button>
     <button class="nav-btn" onclick="aPage('stats',this)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Stats
     </button>
   </div>
@@ -269,491 +436,6 @@ select.inp{cursor:pointer}
   <div class="modal" id="modal-content"></div>
 </div>
 
-<script>
-const SB_URL = 'https://ejivtzvicrvzstghknyy.supabase.co';
-const SB_KEY = 'sb_publishable_CLQjfcou5IllYGoSZi0Dvw_kvhk1fLF';
-
-// ═══ STARS ═══
-(function(){
-  const s=document.getElementById('stars');
-  for(let i=0;i<80;i++){
-    const el=document.createElement('div');el.className='star';
-    const sz=Math.random()*2+0.5;
-    el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*4)+'s;--delay:'+Math.random()*4+'s;--op:'+(0.3+Math.random()*0.6);
-    s.appendChild(el);
-  }
-})();
-
-// ═══ SUPABASE API ═══
-async function sb(table, method='GET', body=null, query=''){
-  const url = SB_URL+'/rest/v1/'+table+(query?'?'+query:'');
-  const headers = {
-    'apikey': SB_KEY,
-    'Authorization': 'Bearer '+SB_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': method==='POST'?'return=representation':'return=representation'
-  };
-  const res = await fetch(url, {method, headers, body: body?JSON.stringify(body):null});
-  if(!res.ok){const e=await res.text();throw new Error(e);}
-  const txt = await res.text();
-  return txt ? JSON.parse(txt) : [];
-}
-
-async function sbGet(table, query=''){return sb(table,'GET',null,query);}
-async function sbPost(table, data){return sb(table,'POST',data);}
-async function sbPatch(table, query, data){return sb(table,'PATCH',data,query);}
-async function sbDelete(table, query){return sb(table,'DELETE',null,query);}
-
-// ═══ UTILS ═══
-let me=null, selPlanName='100 Go', photoData=null, curChatId=null, curDetailId=null, curPayId=null;
-
-function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
-function now(){return new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'});}
-function today(){return new Date().toISOString().split('T')[0];}
-function fmtDate(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}catch{return d;}}
-function daysLeft(exp){if(!exp)return null;const diff=Math.ceil((new Date(exp)-new Date())/(1000*60*60*24));return diff;}
-function showModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').style.display='flex';}
-function closeModal(){document.getElementById('modal').style.display='none';}
-function togglePass(){const i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password';}
-function loading(el){if(el)el.innerHTML='<div class="loading"><div class="spinner"></div>Chargement...</div>';}
-function initials(name){return(name||'??').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-
-// ═══ LOGIN ═══
-async function doLogin(){
-  const btn=document.getElementById('login-btn');
-  const u=document.getElementById('login-user').value.trim().toLowerCase();
-  const p=document.getElementById('login-pass').value;
-  if(!u||!p){document.getElementById('login-err').style.display='block';document.getElementById('login-err').textContent='⚠️ Remplissez tous les champs';return;}
-  btn.textContent='Connexion...';btn.disabled=true;
-  try{
-    // Check admin
-    const admins=await sbGet('admins','username=eq.'+u+'&password=eq.'+p);
-    if(admins.length>0){
-      me={...admins[0],role:'admin'};
-      showPage('page-admin');aPage('dashboard',null);
-      btn.textContent='Se connecter →';btn.disabled=false;return;
-    }
-    // Check client
-    const clients=await sbGet('clients','username=eq.'+u+'&password=eq.'+p);
-    if(clients.length>0){
-      me={...clients[0],role:'client'};
-      showPage('page-client');cPage('home',null);
-      btn.textContent='Se connecter →';btn.disabled=false;return;
-    }
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-err').textContent='⚠️ Identifiants incorrects';
-  }catch(e){
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-err').textContent='⚠️ Erreur de connexion. Réessayez.';
-  }
-  btn.textContent='Se connecter →';btn.disabled=false;
-}
-document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
-function logout(){me=null;document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('login-err').style.display='none';showPage('page-login');}
-
-// ═══ CLIENT NAV ═══
-function cPage(page,btn){
-  document.querySelectorAll('#page-client .nav-btn').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  else{const b=document.getElementById('cnav-'+page);if(b)b.classList.add('active');}
-  const c=document.getElementById('c-content');
-  loading(c);
-  if(page==='home')renderClientHome();
-  else if(page==='paiement')renderClientPaiement();
-  else if(page==='messages')renderClientMessages();
-  else if(page==='profil')renderClientProfil();
-}
-
-// ═══ CLIENT HOME ═══
-async function renderClientHome(){
-  const c=document.getElementById('c-content');
-  try{
-    const [clientData, payments, tickets] = await Promise.all([
-      sbGet('clients','id=eq.'+me.id),
-      sbGet('payments','client_id=eq.'+me.id+'&order=created_at.desc&limit=5'),
-      sbGet('tickets','client_id=eq.'+me.id)
-    ]);
-    const u=clientData[0]||me;
-    me={...me,...u};
-    const dl=daysLeft(u.expiry_date);
-    const freeTickets=tickets.filter(t=>!t.is_used);
-    const h=new Date().getHours();
-    const greet=h<12?'Bonjour':'Bonsoir';
-    const pct=dl!==null&&dl>0?Math.min(100,Math.round(dl/30*100)):0;
-    const fillColor=pct>50?'var(--success)':pct>20?'var(--warning)':'var(--danger)';
-    const statusLabel={active:'Actif',expired:'Expiré',pending:'En attente'};
-    let html='<div class="fade-up">';
-    html+='<div style="margin-bottom:16px"><div style="font-size:22px;font-weight:700">'+greet+', '+u.name.split(' ')[0]+' 👋</div><div style="font-size:13px;color:var(--text2);margin-top:2px">Bienvenue sur NTY Starnet</div></div>';
-    // Notifs
-    if(dl!==null&&dl<=7&&dl>=0)html+='<div class="notif-bar notif-warning">⚠️ Votre abonnement expire dans <strong style="margin:0 4px">'+dl+' jour'+(dl>1?'s':'')+'</strong>. Renouvelez !</div>';
-    if(dl!==null&&dl<0)html+='<div class="notif-bar notif-danger">❌ Votre abonnement a expiré. Veuillez renouveler.</div>';
-    if(u.current_ticket)html+='<div class="notif-bar notif-success">✅ Votre ticket Mikrotik est actif.</div>';
-    if(freeTickets.length===0&&u.status==='active')html+='<div class="notif-bar notif-danger">⚠️ Plus de tickets disponibles. Contactez l\'admin.</div>';
-    const pendingPays=payments.filter(p=>p.status==='pending');
-    if(pendingPays.length>0)html+='<div class="notif-bar notif-info">🕐 Votre paiement est en cours de validation.</div>';
-    // Status card
-    html+='<div class="status-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px"><div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Abonnement</div><span class="badge badge-'+(u.status||'pending')+'">'+(statusLabel[u.status||'pending'])+'</span></div><div style="text-align:right"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">PLAN</div><div style="font-weight:700;font-size:15px">'+(u.plan||'—')+'</div><div style="font-size:12px;color:var(--text3)">'+(u.plan_price||'—')+' Ar/mois</div></div></div>';
-    html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:11px;color:var(--text3)">EXPIRATION</div><div style="font-weight:600;font-size:14px;margin-top:2px">'+fmtDate(u.expiry_date)+'</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--text3)">JOURS RESTANTS</div><div style="font-weight:700;font-size:20px;color:'+fillColor+';font-family:var(--mono);margin-top:2px">'+(dl!==null&&dl>=0?dl:'—')+'</div></div></div>';
-    if(dl!==null&&dl>=0)html+='<div class="expiry-bar"><div class="expiry-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>';
-    html+='<button class="btn btn-primary" style="margin-top:14px;margin-bottom:0" onclick="cPage(\'paiement\',document.getElementById(\'cnav-paiement\'))">Renouveler l\'abonnement</button></div>';
-    // Ticket
-    if(u.current_ticket){
-      html+='<div class="ticket-box"><div style="font-size:11px;color:var(--text3)">TICKET MIKROTIK ACTUEL</div><div class="ticket-code">'+u.current_ticket+'</div><div style="font-size:11px;color:var(--text3);margin-top:6px">Valable 30 jours · '+fmtDate(u.expiry_date)+'</div></div>';
-    }
-    // Stats
-    html+='<div class="stat-grid"><div class="stat-box"><div class="stat-num" style="color:var(--accent2)">'+payments.filter(p=>p.status==='validated').length+'</div><div class="stat-lbl">Paiements validés</div></div><div class="stat-box"><div class="stat-num" style="color:var(--success)">'+freeTickets.length+'</div><div class="stat-lbl">Tickets dispo</div></div></div>';
-    // Historique
-    html+='<div class="card"><div class="card-title">Historique des paiements</div>';
-    if(!payments.length)html+='<div class="empty"><div class="empty-icon">💳</div>Aucun paiement</div>';
-    else payments.forEach(p=>{
-      const ic=p.status==='validated'?'✅':p.status==='rejected'?'❌':'🕐';
-      html+='<div class="info-row"><div><div style="font-size:13px;font-weight:500">'+ic+' '+p.plan+'</div><div style="font-size:11px;color:var(--text3)">'+fmtDate(p.payment_date)+' · Réf: '+(p.reference||'—')+'</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:13px;font-weight:600">'+(p.amount||'—')+' Ar</div><span class="badge badge-'+p.status+'" style="font-size:10px;padding:2px 8px">'+({validated:'Validé',pending:'En attente',rejected:'Refusé'}[p.status]||p.status)+'</span></div></div>';
-    });
-    html+='</div></div>';
-    c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Erreur de chargement. <button class="btn btn-ghost" style="margin-top:12px;width:auto;padding:8px 16px" onclick="cPage(\'home\',null)">Réessayer</button></div>';}
-}
-
-// ═══ CLIENT PAIEMENT ═══
-function renderClientPaiement(){
-  const c=document.getElementById('c-content');
-  photoData=null;
-  const plans=[['100 Go','40.000','30 jours'],['200 Go','55.000','30 jours'],['Illimité 5 appareils','65.000','30 jours · 5 appareils'],['Illimité 9+ appareils','90.000','30 jours · 9+ appareils']];
-  let html='<div class="fade-up"><div style="font-size:20px;font-weight:700;margin-bottom:4px">Renouveler</div><div style="font-size:13px;color:var(--text2);margin-bottom:16px">Choisissez votre abonnement</div>';
-  html+='<div class="pay-box"><div style="font-size:12px;color:#34d399;font-weight:600;margin-bottom:6px">📲 Envoyer le paiement sur</div><span class="pay-num">0344127501</span><span class="pay-num">0346341775</span><span class="pay-num">0321825114</span><div style="font-size:11px;color:var(--text3);margin-top:6px">Puis remplissez le formulaire ci-dessous</div></div>';
-  html+='<div class="card"><div class="card-title">Choisir un abonnement</div>';
-  plans.forEach(([n,p,d],i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+n+'\')"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600;font-size:14px">'+n+'</div><div style="font-size:11px;color:var(--text3)">'+d+'</div></div><div style="font-size:18px;font-weight:700;color:var(--accent2)">'+p+' Ar</div></div></div>';});
-  html+='<div class="divider"></div><label class="inp-label">Date du paiement *</label><input class="inp" type="date" id="c-paydate" max="'+today()+'"><label class="inp-label">Référence du paiement</label><input class="inp" type="text" id="c-payref" placeholder="Ex: TXN123456789"><label class="inp-label">Photo du reçu</label>';
-  html+='<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'c-photo\').click()">📷 Appuyez pour ajouter une photo<div style="font-size:11px;margin-top:4px;color:var(--text3)">JPG, PNG</div><input type="file" id="c-photo" accept="image/*" style="display:none" onchange="previewPhoto()"></div>';
-  html+='<div id="photo-preview" style="display:none;margin-bottom:10px"><img id="preview-img" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;border:1px solid var(--border)"><button class="btn btn-ghost" style="margin-top:8px" onclick="removePhoto()">🗑 Supprimer</button></div>';
-  html+='<button class="btn btn-primary" onclick="submitPay()">Envoyer la demande</button></div></div>';
-  c.innerHTML=html;
-  selPlanName='100 Go';
-}
-
-function selPlan(el,name){document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');selPlanName=name;}
-function previewPhoto(){
-  const f=document.getElementById('c-photo').files[0];
-  if(!f)return;
-  const r=new FileReader();
-  r.onload=e=>{photoData=e.target.result;document.getElementById('preview-img').src=photoData;document.getElementById('photo-preview').style.display='block';document.getElementById('upload-zone').style.display='none';};
-  r.readAsDataURL(f);
-}
-function removePhoto(){photoData=null;document.getElementById('c-photo').value='';document.getElementById('photo-preview').style.display='none';document.getElementById('upload-zone').style.display='block';}
-
-async function submitPay(){
-  const d=document.getElementById('c-paydate').value;
-  if(!d){alert('⚠️ Veuillez indiquer la date du paiement.');return;}
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'};
-  try{
-    await sbPost('payments',{client_id:me.id,client_name:me.name,plan:selPlanName,amount:prices[selPlanName]||'—',payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData});
-    await sbPatch('clients','id=eq.'+me.id,{status:'pending'});
-    me.status='pending';
-    photoData=null;
-    showModal('<div style="text-align:center;padding:10px"><div style="font-size:48px;margin-bottom:16px">✅</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Demande envoyée !</div><div style="font-size:13px;color:var(--text2);margin-bottom:20px">L\'administrateur va valider votre paiement et vous envoyer votre ticket Mikrotik.</div><button class="btn btn-primary" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">OK</button></div>');
-  }catch(e){alert('Erreur lors de l\'envoi. Réessayez.');}
-}
-
-// ═══ CLIENT MESSAGES ═══
-async function renderClientMessages(){
-  document.getElementById('c-msg-dot').style.display='none';
-  const c=document.getElementById('c-content');
-  try{
-    const msgs=await sbGet('messages','client_id=eq.'+me.id+'&order=created_at.asc');
-    let html='<div class="fade-up"><div style="font-size:20px;font-weight:700;margin-bottom:16px">Messages</div><div class="card" style="padding:0;overflow:hidden">';
-    html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;font-size:16px">🛜</div><div><div style="font-weight:600;font-size:14px">NTY Starnet Support</div><div style="font-size:11px;color:var(--success)">● En ligne</div></div></div>';
-    html+='<div class="msg-list" id="c-msg-list">';
-    if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div>Commencez la conversation</div>';
-    else msgs.forEach(m=>{
-      const mine=m.sender==='client';
-      html+='<div style="display:flex;flex-direction:column;align-items:'+(mine?'flex-end':'flex-start')+'"><div class="bubble bubble-'+(mine?'sent':'recv')+'">'+m.content+'</div><div class="msg-meta" style="text-align:'+(mine?'right':'left')+'">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';
-    });
-    html+='</div><div class="chat-inp-row"><input class="inp" type="text" id="c-msg-inp" placeholder="Écrire un message..." style="margin:0;flex:1" onkeydown="if(event.key===\'Enter\')cSendMsg()"><button class="btn btn-primary btn-sm" onclick="cSendMsg()">→</button></div></div></div>';
-    c.innerHTML=html;
-    const el=document.getElementById('c-msg-list');
-    if(el)el.scrollTop=el.scrollHeight;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Erreur de chargement</div>';}
-}
-
-async function cSendMsg(){
-  const inp=document.getElementById('c-msg-inp');
-  if(!inp||!inp.value.trim())return;
-  const txt=inp.value.trim();inp.value='';
-  try{
-    await sbPost('messages',{client_id:me.id,sender:'client',sender_name:me.name,content:txt});
-    renderClientMessages();
-  }catch(e){inp.value=txt;alert('Erreur envoi message');}
-}
-
-// ═══ CLIENT PROFIL ═══
-function renderClientProfil(){
-  const u=me;
-  const c=document.getElementById('c-content');
-  let html='<div class="fade-up"><div style="text-align:center;margin-bottom:20px"><div style="width:70px;height:70px;border-radius:20px;background:linear-gradient(135deg,#1a3a6e,#2d3a8e);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;font-weight:700;color:var(--accent2);font-family:var(--mono);border:2px solid var(--border2)">'+initials(u.name)+'</div><div style="font-size:18px;font-weight:700">'+u.name+'</div><div style="font-size:13px;color:var(--text2)">@'+u.username+'</div><div style="margin-top:8px"><span class="badge badge-'+(u.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[u.status||'pending'])+'</span></div></div>';
-  html+='<div class="card"><div class="card-title">Informations</div><div class="info-row"><div class="info-key">Téléphone</div><div class="info-val">'+(u.phone||'—')+'</div></div><div class="info-row"><div class="info-key">Plan</div><div class="info-val">'+(u.plan||'—')+'</div></div><div class="info-row"><div class="info-key">Expiration</div><div class="info-val">'+fmtDate(u.expiry_date)+'</div></div></div>';
-  html+='<div class="card"><div class="card-title">Sécurité</div><button class="btn btn-ghost" onclick="showChangePass()">🔐 Changer mon mot de passe</button></div>';
-  html+='<button class="btn btn-danger" onclick="logout()">Déconnexion</button></div>';
-  c.innerHTML=html;
-}
-
-function showChangePass(){
-  showModal('<div class="modal-title">Changer le mot de passe <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Mot de passe actuel</label><input class="inp" type="password" id="old-pass" placeholder="••••••••"><label class="inp-label">Nouveau mot de passe</label><input class="inp" type="password" id="new-pass" placeholder="••••••••"><label class="inp-label">Confirmer</label><input class="inp" type="password" id="conf-pass" placeholder="••••••••"><button class="btn btn-primary" onclick="changePass()">Changer</button><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>');
-}
-
-async function changePass(){
-  const old=document.getElementById('old-pass').value;
-  const n=document.getElementById('new-pass').value;
-  const conf=document.getElementById('conf-pass').value;
-  if(old!==me.password){alert('Mot de passe actuel incorrect');return;}
-  if(n.length<4){alert('Mot de passe trop court (min 4 caractères)');return;}
-  if(n!==conf){alert('Les mots de passe ne correspondent pas');return;}
-  try{
-    const table=me.role==='admin'?'admins':'clients';
-    await sbPatch(table,'id=eq.'+me.id,{password:n});
-    me.password=n;
-    closeModal();
-    showModal('<div style="text-align:center;padding:10px"><div style="font-size:40px;margin-bottom:12px">🔐</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Mot de passe modifié !</div><button class="btn btn-primary" onclick="closeModal()">OK</button></div>');
-  }catch(e){alert('Erreur lors de la modification');}
-}
-
-// ═══ ADMIN NAV ═══
-function aPage(page,btn){
-  document.querySelectorAll('#page-admin .nav-btn').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  const c=document.getElementById('a-content');
-  loading(c);
-  if(page==='dashboard')renderAdminDashboard();
-  else if(page==='clients')renderAdminClients();
-  else if(page==='paiements')renderAdminPaiements();
-  else if(page==='messages')renderAdminMessages();
-  else if(page==='stats')renderAdminStats();
-}
-
-// ═══ ADMIN DASHBOARD ═══
-async function renderAdminDashboard(){
-  const c=document.getElementById('a-content');
-  try{
-    const [clients,payments] = await Promise.all([
-      sbGet('clients'),
-      sbGet('payments','order=created_at.desc')
-    ]);
-    const actifs=clients.filter(x=>x.status==='active').length;
-    const expires=clients.filter(x=>x.status==='expired').length;
-    const pending=clients.filter(x=>x.status==='pending').length;
-    const pPending=payments.filter(p=>p.status==='pending');
-    const revenue=payments.filter(p=>p.status==='validated').reduce((s,p)=>s+(parseInt((p.amount||'0').replace('.',''))||0),0);
-    const dot=document.getElementById('a-pay-dot');
-    if(dot)dot.style.display=pPending.length>0?'block':'none';
-    let html='<div class="fade-up"><div style="font-size:20px;font-weight:700;margin-bottom:16px">Tableau de bord</div>';
-    html+='<div class="revenue-card"><div class="card-title" style="color:var(--gold)">💰 Revenus totaux validés</div><div class="revenue-num">'+revenue.toLocaleString('fr')+' Ar</div><div style="font-size:12px;color:var(--text3);margin-top:4px">'+payments.filter(p=>p.status==='validated').length+' paiements validés</div></div>';
-    html+='<div class="stat-grid"><div class="stat-box"><div class="stat-num" style="color:var(--accent2)">'+clients.length+'</div><div class="stat-lbl">Total clients</div></div><div class="stat-box"><div class="stat-num" style="color:var(--success)">'+actifs+'</div><div class="stat-lbl">Actifs</div></div><div class="stat-box"><div class="stat-num" style="color:var(--warning)">'+pending+'</div><div class="stat-lbl">En attente</div></div><div class="stat-box"><div class="stat-num" style="color:var(--danger)">'+expires+'</div><div class="stat-lbl">Expirés</div></div></div>';
-    if(pPending.length>0){
-      html+='<div class="card"><div class="section-header"><div class="section-title">🔔 Paiements en attente</div><span class="badge badge-pending">'+pPending.length+'</span></div>';
-      for(const p of pPending.slice(0,3)){
-        const cTickets=await sbGet('tickets','client_id=eq.'+p.client_id+'&is_used=eq.false&order=created_at.asc&limit=1');
-        const next=cTickets[0];
-        html+='<div class="pay-row"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><div style="font-weight:600;font-size:14px">'+p.client_name+'</div><div style="font-size:12px;color:var(--text3)">'+p.plan+' · '+fmtDate(p.payment_date)+'</div>'+(next?'<div style="font-size:12px;color:var(--success);margin-top:2px">Ticket: '+next.code+'</div>':'<div style="font-size:12px;color:var(--danger);margin-top:2px">⚠️ Aucun ticket dispo</div>')+'</div><div style="font-family:var(--mono);font-size:14px;font-weight:700">'+(p.amount||'—')+' Ar</div></div><div style="display:flex;gap:6px"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div></div>';
-      }
-      html+='</div>';
-    }
-    // Expirent bientôt
-    const soon=clients.filter(x=>{const dl=daysLeft(x.expiry_date);return dl!==null&&dl>=0&&dl<=7;});
-    if(soon.length>0){
-      html+='<div class="card"><div class="card-title">⚠️ Expirent bientôt</div>';
-      soon.forEach(x=>{const dl=daysLeft(x.expiry_date);html+='<div class="info-row"><div><div style="font-weight:500;font-size:13px">'+x.name+'</div><div style="font-size:11px;color:var(--text3)">'+x.plan+'</div></div><div style="font-family:var(--mono);font-weight:700;color:var(--warning);font-size:13px">'+dl+'j</div></div>';});
-      html+='</div>';
-    }
-    html+='</div>';
-    c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Erreur<br><button class="btn btn-ghost" style="margin-top:12px;width:auto;padding:8px 16px" onclick="aPage(\'dashboard\',null)">Réessayer</button></div>';}
-}
-
-// ═══ ADMIN CLIENTS ═══
-async function renderAdminClients(search=''){
-  const c=document.getElementById('a-content');
-  try{
-    let query='order=created_at.desc';
-    if(search)query+='&or=(name.ilike.*'+search+'*,username.ilike.*'+search+'*)';
-    const clients=await sbGet('clients',query);
-    let html='<div class="fade-up"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:20px;font-weight:700">Clients</div><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div>';
-    html+='<div class="search-wrap"><svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-inp" type="text" placeholder="Rechercher..." value="'+search+'" oninput="renderAdminClients(this.value)"></div>';
-    if(!clients.length)html+='<div class="empty"><div class="empty-icon">👤</div>Aucun client</div>';
-    else{
-      html+='<div class="card">';
-      for(const cl of clients){
-        const tickets=await sbGet('tickets','client_id=eq.'+cl.id+'&is_used=eq.false');
-        const free=tickets.length;
-        const dl=daysLeft(cl.expiry_date);
-        html+='<div class="client-row" onclick="openDetail(\''+cl.id+'\')"><div class="avatar">'+initials(cl.name)+'</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">'+cl.name+'</div><div style="font-size:11px;color:var(--text3)">@'+cl.username+' · '+free+' ticket'+(free>1?'s':'')+' · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><span style="font-size:11px;color:var(--text3)">→</span></div></div>';
-      }
-      html+='</div>';
-    }
-    html+='</div>';
-    c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Erreur<br><button class="btn btn-ghost" style="margin-top:12px;width:auto;padding:8px 16px" onclick="renderAdminClients()">Réessayer</button></div>';}
-}
-
-// ═══ ADMIN PAIEMENTS ═══
-async function renderAdminPaiements(filter='pending'){
-  const c=document.getElementById('a-content');
-  try{
-    let query='order=created_at.desc';
-    if(filter)query+='&status=eq.'+filter;
-    const pays=await sbGet('payments',query);
-    let html='<div class="fade-up"><div style="font-size:20px;font-weight:700;margin-bottom:14px">Paiements</div>';
-    html+='<div class="tabs"><button class="tab '+(filter==='pending'?'active':'')+'" onclick="renderAdminPaiements(\'pending\')">En attente</button><button class="tab '+(filter==='validated'?'active':'')+'" onclick="renderAdminPaiements(\'validated\')">Validés</button><button class="tab '+(filter===''?'active':'')+'" onclick="renderAdminPaiements(\'\')">Tous</button></div>';
-    if(!pays.length)html+='<div class="empty"><div class="empty-icon">💳</div>Aucun paiement</div>';
-    else{
-      for(const p of pays){
-        const cTickets=p.status==='pending'?await sbGet('tickets','client_id=eq.'+p.client_id+'&is_used=eq.false&order=created_at.asc&limit=1'):[];
-        const next=cTickets[0];
-        html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px"><div><div style="font-weight:700;font-size:15px">'+p.client_name+'</div><div style="font-size:12px;color:var(--text3)">'+p.plan+' · '+fmtDate(p.payment_date)+'</div><div style="font-size:12px;color:var(--text3)">Réf: '+(p.reference||'—')+'</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-weight:700;font-size:15px">'+(p.amount||'—')+' Ar</div><span class="badge badge-'+p.status+'" style="font-size:10px;margin-top:4px">'+({validated:'Validé',pending:'En attente',rejected:'Refusé'}[p.status])+'</span></div></div>';
-        if(p.status==='pending'){
-          html+=(next?'<div style="font-size:12px;color:var(--success);margin-bottom:8px;padding:6px 10px;background:rgba(16,185,129,0.06);border-radius:6px">🎫 Prochain ticket: <strong>'+next.code+'</strong></div>':'<div style="font-size:12px;color:var(--danger);margin-bottom:8px;padding:6px 10px;background:rgba(239,68,68,0.06);border-radius:6px">⚠️ Aucun ticket disponible</div>');
-          html+='<div style="display:flex;gap:8px"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider + Envoyer ticket</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div>';
-        }
-        if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:8px&quot;>\')">📷 Voir la preuve</button>';
-        html+='</div>';
-      }
-    }
-    html+='</div>';
-    c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Erreur</div>';}
-}
-
-// ═══ VALIDATE PAY ═══
-async function openValidate(payId){
-  curPayId=payId;
-  try{
-    const [pays,] = await Promise.all([sbGet('payments','id=eq.'+payId)]);
-    const pay=pays[0];
-    const cTickets=await sbGet('tickets','client_id=eq.'+pay.client_id+'&is_used=eq.false&order=created_at.asc&limit=1');
-    const next=cTickets[0];
-    let html='<div class="modal-title">Valider le paiement <button class="modal-close" onclick="closeModal()">×</button></div>';
-    html+='<div style="font-size:14px;color:var(--text2);margin-bottom:14px">Client : <strong style="color:var(--text)">'+pay.client_name+'</strong></div>';
-    html+=[['Plan',pay.plan],['Montant',(pay.amount||'—')+' Ar'],['Date',fmtDate(pay.payment_date)],['Référence',pay.reference||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
-    if(pay.photo_url)html+='<div style="margin:12px 0"><div class="inp-label">Preuve</div><img src="'+pay.photo_url+'" style="width:100%;border-radius:8px;max-height:160px;object-fit:cover;border:1px solid var(--border)"></div>';
-    html+='<div class="divider"></div>';
-    html+='<div class="ticket-box"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">TICKET QUI SERA ENVOYÉ</div><div class="ticket-code">'+(next?next.code:'—')+'</div></div>';
-    if(!next)html+='<div style="color:var(--danger);font-size:13px;margin-bottom:12px;padding:10px;background:rgba(239,68,68,0.08);border-radius:8px">⚠️ Aucun ticket disponible. Ajoutez des tickets dans la fiche client.</div>';
-    if(next)html+='<button class="btn btn-success" onclick="validatePay(\''+payId+'\',\''+next.id+'\',\''+next.code+'\',\''+pay.client_id+'\')">✓ Valider et envoyer le ticket</button>';
-    html+='<button class="btn btn-danger" onclick="closeModal();rejectConfirm()">✗ Refuser</button><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
-    showModal(html);
-  }catch(e){alert('Erreur chargement');}
-}
-
-async function validatePay(payId,ticketId,ticketCode,clientId){
-  try{
-    const exp=new Date();exp.setDate(exp.getDate()+30);
-    const expStr=exp.toISOString().split('T')[0];
-    await sbPatch('payments','id=eq.'+payId,{status:'validated'});
-    await sbPatch('tickets','id=eq.'+ticketId,{is_used:true,is_current:true});
-    await sbPatch('clients','id=eq.'+clientId,{status:'active',current_ticket:ticketCode,expiry_date:expStr});
-    await sbPost('messages',{client_id:clientId,sender:'admin',sender_name:'Admin',content:'✅ Paiement validé ! Votre ticket Mikrotik : '+ticketCode+'\n\nValable 30 jours jusqu\'au '+fmtDate(expStr)+'. Connectez-vous avec ce code sur le réseau NTY Starnet.'});
-    closeModal();
-    showModal('<div style="text-align:center;padding:10px"><div style="font-size:48px;margin-bottom:12px">🎉</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Ticket envoyé !</div><div class="ticket-box" style="margin-bottom:12px"><div class="ticket-code">'+ticketCode+'</div></div><button class="btn btn-primary" onclick="closeModal();aPage(\'paiements\',null)">OK</button></div>');
-  }catch(e){alert('Erreur lors de la validation');}
-}
-
-function rejectConfirm(){
-  showModal('<div class="modal-title">Refuser <button class="modal-close" onclick="closeModal()">×</button></div><div style="font-size:13px;color:var(--text2);margin-bottom:14px">Le client sera notifié du refus.</div><label class="inp-label">Motif (optionnel)</label><input class="inp" type="text" id="reject-reason" placeholder="Ex: Référence incorrecte"><button class="btn btn-danger" onclick="doReject()">✗ Confirmer le refus</button><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>');
-}
-
-async function doReject(){
-  const reason=document.getElementById('reject-reason')?.value||'';
-  try{
-    const pays=await sbGet('payments','id=eq.'+curPayId);
-    const pay=pays[0];
-    await sbPatch('payments','id=eq.'+curPayId,{status:'rejected'});
-    await sbPost('messages',{client_id:pay.client_id,sender:'admin',sender_name:'Admin',content:'❌ Votre paiement du '+fmtDate(pay.payment_date)+' a été refusé.'+(reason?' Motif: '+reason:'')+' Veuillez nous recontacter.'});
-    closeModal();aPage('paiements',null);
-  }catch(e){alert('Erreur');}
-}
-
-// ═══ ADMIN DETAIL CLIENT ═══
-async function openDetail(id){
-  curDetailId=id;
-  try{
-    const [clients,tickets,payments]=await Promise.all([
-      sbGet('clients','id=eq.'+id),
-      sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc'),
-      sbGet('payments','client_id=eq.'+id+'&order=created_at.desc&limit=5')
-    ]);
-    const cl=clients[0];
-    const freeT=tickets.filter(t=>!t.is_used);
-    const dl=daysLeft(cl.expiry_date);
-    let html='<div class="modal-title"><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:40px;height:40px;border-radius:12px;font-size:14px">'+initials(cl.name)+'</div><div><div>'+cl.name+'</div><div style="font-size:11px;color:var(--text3)">@'+cl.username+'</div></div></div><button class="modal-close" onclick="closeModal()">×</button></div>';
-    html+='<div class="tabs"><button class="tab active" onclick="dtab(\'info\',this)">Infos</button><button class="tab" onclick="dtab(\'tickets\',this)">Tickets</button><button class="tab" onclick="dtab(\'edit\',this)">Modifier</button></div>';
-    // Info tab
-    html+='<div id="dt-info">';
-    html+=[['Statut','<span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span>'],['Plan',cl.plan||'—'],['Prix',(cl.plan_price||'—')+' Ar/mois'],['Expiration',fmtDate(cl.expiry_date)],['Jours restants',dl!==null&&dl>=0?dl+' jours':'—'],['Tickets dispo',freeT.length+' / '+tickets.length],['Téléphone',cl.phone||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
-    html+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-success" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'active\')">✓ Activer</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'expired\')">✗ Expirer</button></div>';
-    html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2)" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')">🗑 Supprimer ce client</button>';
-    html+='</div>';
-    // Tickets tab
-    html+='<div id="dt-tickets" style="display:none"><label class="inp-label">Ajouter des tickets (un par ligne)</label><textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><button class="btn btn-success" onclick="addMoreTickets(\''+id+'\')">+ Ajouter</button><div style="margin-top:10px">';
-    if(!tickets.length)html+='<div class="empty"><div class="empty-icon">🎫</div>Aucun ticket</div>';
-    else tickets.forEach((t,i)=>{html+='<div class="ticket-item '+(t.is_used?'ticket-used':'')+'"><span style="font-family:var(--mono);font-size:12px">'+(i+1)+'. '+t.code+(t.is_current?' 👈':'')+'</span><span class="tag '+(t.is_current?'tag-cur':t.is_used?'tag-used':'tag-free')+'">'+(t.is_current?'Actuel':t.is_used?'Utilisé':'Dispo')+'</span></div>';});
-    html+='</div></div>';
-    // Edit tab
-    html+='<div id="dt-edit" style="display:none"><label class="inp-label">Nom complet</label><input class="inp" type="text" id="edit-name" value="'+cl.name+'"><label class="inp-label">Username</label><input class="inp" type="text" id="edit-user" value="'+cl.username+'"><label class="inp-label">Nouveau mot de passe (vide = pas de changement)</label><input class="inp" type="password" id="edit-pass" placeholder="Nouveau mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'"><label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimité 5 appareils','Illimité 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select><button class="btn btn-primary" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
-    showModal(html);
-  }catch(e){alert('Erreur chargement client');}
-}
-
-function dtab(tab,btn){
-  document.querySelectorAll('#modal-content .tab').forEach(t=>t.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  ['info','tickets','edit'].forEach(t=>{const el=document.getElementById('dt-'+t);if(el)el.style.display=t===tab?'block':'none';});
-}
-
-async function quickStatus(id,status){
-  try{await sbPatch('clients','id=eq.'+id,{status});closeModal();renderAdminClients();}
-  catch(e){alert('Erreur');}
-}
-
-async function deleteClient(id,name){
-  if(!confirm('Supprimer "'+name+'" ? Action irréversible.'))return;
-  try{await sbDelete('clients','id=eq.'+id);closeModal();renderAdminClients();}
-  catch(e){alert('Erreur suppression');}
-}
-
-async function addMoreTickets(clientId){
-  const raw=document.getElementById('new-tickets-inp')?.value.trim();
-  if(!raw){alert('Entrez au moins un ticket.');return;}
-  const codes=raw.split('\n').map(t=>t.trim()).filter(t=>t);
-  try{
-    for(const code of codes){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
-    alert('✅ '+codes.length+' ticket(s) ajouté(s) !');
-    openDetail(clientId);
-  }catch(e){alert('Erreur ajout tickets');}
-}
-
-async function saveClientEdit(id){
-  const name=document.getElementById('edit-name').value.trim();
-  const user=document.getElementById('edit-user').value.trim().toLowerCase();
-  const pass=document.getElementById('edit-pass').value;
-  const phone=document.getElementById('edit-phone').value.trim();
-  const plan=document.getElementById('edit-plan').value;
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'};
-  if(!name||!user){alert('Nom et username requis');return;}
-  const updates={name,username:user,phone,plan,plan_price:prices[plan]};
-  if(pass){if(pass.length<4){alert('Mot de passe trop court');return;}updates.password=pass;}
-  try{
-    await sbPatch('clients','id=eq.'+id,updates);
-    closeModal();
-    showModal('<div style="text-align:center;padding:10px"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Client modifié !</div>'+(pass?'<div style="font-size:13px;color:var(--text2)">Nouveau MDP: <strong>'+pass+'</strong></div>':'')+'<button class="btn btn-primary" style="margin-top:12px" onclick="closeModal();renderAdminClients()">OK</button></div>');
-  }catch(e){alert('Erreur modification. Username peut-être déjà utilisé.');}
-}
-
-// ═══ ADD CLIENT ═══
-function showAddClient(){
-  showModal('<div class="modal-title">Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass" placeholder="Choisir un mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimité 5 appareils</option><option>Illimité 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><div style="font-size:11px;color:var(--text3);margin-bottom:12px">Les tickets seront envoyés un par un à chaque paiement validé.</div><button class="btn btn-primary" onclick="addClient()">✓ Créer le client</button><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>');
-}
-
-async function addClient(){
-  const name=document.getElementById('n-name').value.trim();
-  const user=document.getElementById('n-user').value.trim().toLowerCase();
-  const pass=document.getElementById('n-pass').value;
-  const phone=document.getE
+<script src="app.js"></script>
+</body>
+</html>

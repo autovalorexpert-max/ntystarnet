@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#030712"/>
+  <rect width="512" height="512" rx="100" fill="url(#g)"/>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628"/>
+      <stop offset="100%" style="stop-color:#1a3a6e"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#3b82f6" stroke-width="3" opacity="0.3"/>
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#6366f1" stroke-width="2" opacity="0.2"/>
+  <text x="256" y="200" text-anchor="middle" font-family="monospace" font-size="72" font-weight="bold" fill="#60a5fa" letter-spacing="4">NTY</text>
+  <text x="256" y="260" text-anchor="middle" font-family="monospace" font-size="36" fill="#818cf8" letter-spacing="6">STARNET</text>
+  <path d="M100 320 Q256 270 412 320" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M140 360 Q256 320 372 360" fill="none" stroke="#60a5fa" stroke-width="8" stroke-linecap="round"/>
+  <path d="M185 400 Q256 370 327 400" fill="none" stroke="#34d399" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="430" r="12" fill="#60a5fa"/>
+</svg>
