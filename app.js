@@ -30,7 +30,7 @@ function showModal(html){document.getElementById('modal-content').innerHTML=html
 function closeModal(){document.getElementById('modal').style.display='none';}
 function togglePass(){const i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password';}
 function initials(n){return(n||'??').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function loading(el){if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><p>Chargement...</p></div>';}
+function loading(el){if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><p>Chargement en cours...</p></div>';}
 function toast(msg,type='success'){
   const t=document.createElement('div');t.className='toast toast-'+type;t.innerHTML=msg;
   document.body.appendChild(t);
@@ -72,12 +72,12 @@ function cPage(page,btn){
   if(btn)btn.classList.add('active');
   else{const b=document.getElementById('cnav-'+page);if(b)b.classList.add('active');}
   const c=document.getElementById('c-content');loading(c);
-  setTimeout(()=>{
+  requestAnimationFrame(()=>{
     if(page==='home')renderClientHome();
     else if(page==='paiement')renderClientPaiement();
     else if(page==='messages')renderClientMessages();
     else if(page==='profil')renderClientProfil();
-  },50);
+  });
 }
 
 async function renderClientHome(){
@@ -266,13 +266,13 @@ function aPage(page,btn){
   document.querySelectorAll('#page-admin .nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   const c=document.getElementById('a-content');loading(c);
-  setTimeout(()=>{
+  requestAnimationFrame(()=>{
     if(page==='dashboard')renderAdminDashboard();
     else if(page==='clients')renderAdminClients();
     else if(page==='paiements')renderAdminPaiements();
     else if(page==='messages')renderAdminMessages();
     else if(page==='stats')renderAdminStats();
-  },50);
+  });
 }
 
 async function renderAdminDashboard(){
