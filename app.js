@@ -178,6 +178,7 @@ function renderClientPaiement(){
   nums.forEach(num=>{
     html+='<div class="pay-num-row"><div class="pay-num">'+num.n+'</div><div class="pay-num-name">'+num.name+'</div></div>';
   });
+  html+='<div class="pay-box-warn">⚠️ Frais de retrait Mobile Money à votre charge — merci d\'envoyer le montant exact du forfait + frais de retrait.</div>';
   html+='<div class="pay-box-sub">Puis remplissez le formulaire ci-dessous ↓</div></div>';
   html+='<div class="section-card"><div class="section-head">Choisir un plan</div>';
   plans.forEach((pl,i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+pl.n+'\')"><div class="plan-icon">'+pl.icon+'</div><div class="plan-info"><div class="plan-name">'+pl.n+'</div><div class="plan-desc">'+pl.d+'</div></div><div class="plan-price">'+pl.p+' Ar</div></div>';});
