@@ -355,16 +355,20 @@ async function renderAdminClients(search=''){
   try{
     let q='order=created_at.desc';
     if(search)q+='&or=(name.ilike.*'+search+'*,username.ilike.*'+search+'*)';
-    const clients=await sbGet('clients',q);
+    // Charge clients ET tous les tickets dispo en parallèle (2 appels au lieu de N+1)
+    const [clients,allFreeTickets]=await Promise.all([sbGet('clients',q),sbGet('tickets','is_used=eq.false')]);
+    const ticketCountByClient={};
+    allFreeTickets.forEach(t=>{ticketCountByClient[t.client_id]=(ticketCountByClient[t.client_id]||0)+1;});
+
     let html='<div class="fade-up"><div class="page-header-row"><div><div class="page-title">👥 Clients</div><div class="page-sub">'+clients.length+' client(s)</div></div><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div>';
     html+='<div class="search-box"><span class="search-icon">🔍</span><input class="search-inp" type="text" placeholder="Rechercher..." value="'+search+'" oninput="renderAdminClients(this.value)"></div>';
     if(!clients.length)html+='<div class="empty"><div class="empty-icon">👤</div><p>Aucun client</p></div>';
     else{
       html+='<div class="client-list">';
       for(const cl of clients){
-        const tix=await sbGet('tickets','client_id=eq.'+cl.id+'&is_used=eq.false');
+        const tixCount=ticketCountByClient[cl.id]||0;
         const dl=daysLeft(cl.expiry_date);
-        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">@'+cl.username+' · '+tix.length+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
+        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">@'+cl.username+' · '+tixCount+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
       }
       html+='</div>';
     }
@@ -376,13 +380,20 @@ async function renderAdminPaiements(filter='pending'){
   const c=document.getElementById('a-content');
   try{
     let q='order=created_at.desc';if(filter)q+='&status=eq.'+filter;
-    const pays=await sbGet('payments',q);
+    // Charge paiements ET tickets disponibles en parallèle (1 seul appel au lieu d'un par paiement)
+    const [pays,freeTickets]=await Promise.all([
+      sbGet('payments',q),
+      filter==='pending'||filter===''?sbGet('tickets','is_used=eq.false&order=created_at.asc'):Promise.resolve([])
+    ]);
+    // Map client_id -> premier ticket dispo
+    const nextTicketByClient={};
+    freeTickets.forEach(t=>{if(!nextTicketByClient[t.client_id])nextTicketByClient[t.client_id]=t;});
+
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">💳 Paiements</div></div>';
     html+='<div class="filter-tabs"><button class="ftab '+(filter==='pending'?'active':'')+'" onclick="renderAdminPaiements(\'pending\')">En attente</button><button class="ftab '+(filter==='validated'?'active':'')+'" onclick="renderAdminPaiements(\'validated\')">Validés</button><button class="ftab '+(filter===''?'active':'')+'" onclick="renderAdminPaiements(\'\')">Tous</button></div>';
     if(!pays.length)html+='<div class="empty"><div class="empty-icon">💳</div><p>Aucun paiement</p></div>';
     else for(const p of pays){
-      const cT=p.status==='pending'?await sbGet('tickets','client_id=eq.'+p.client_id+'&is_used=eq.false&order=created_at.asc&limit=1'):[];
-      const next=cT[0];
+      const next=p.status==='pending'?nextTicketByClient[p.client_id]:null;
       html+='<div class="pay-card"><div class="pay-card-top"><div><div class="pay-card-name">'+p.client_name+'</div><div class="pay-card-sub">'+p.plan+' · '+fmtDate(p.payment_date)+'</div><div class="pay-card-ref">Réf: '+(p.reference||'—')+'</div></div><div class="pay-card-right"><div class="pay-card-amount">'+(p.amount||'—')+' Ar</div><span class="badge badge-'+p.status+'">'+({validated:'✅ Validé',pending:'⏳ En attente',rejected:'❌ Refusé'}[p.status])+'</span></div></div>';
       if(p.status==='pending'){
         html+=(next?'<div class="ticket-preview">🎫 Prochain ticket: <strong>'+next.code+'</strong></div>':'<div class="ticket-preview" style="color:var(--danger)">⚠️ Aucun ticket disponible</div>');
@@ -501,11 +512,15 @@ async function addClient(){
 async function renderAdminMessages(){
   const c=document.getElementById('a-content');
   try{
-    const clients=await sbGet('clients','order=created_at.desc');
+    // Charge clients ET tous les messages en parallèle (2 appels au lieu de N+1)
+    const [clients,allMsgs]=await Promise.all([sbGet('clients','order=created_at.desc'),sbGet('messages','order=created_at.desc')]);
+    const lastMsgByClient={};
+    allMsgs.forEach(m=>{if(!lastMsgByClient[m.client_id])lastMsgByClient[m.client_id]=m;});
+
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">💬 Messages</div><div class="page-sub">Conversations avec les clients</div></div>';
     if(!clients.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Aucun client</p></div>';
     else for(const cl of clients){
-      const msgs=await sbGet('messages','client_id=eq.'+cl.id+'&order=created_at.desc&limit=1');const last=msgs[0];
+      const last=lastMsgByClient[cl.id];
       html+='<div class="conv-card" onclick="openAdminChat(\''+cl.id+'\',\''+cl.name+'\')"><div class="conv-avatar">'+initials(cl.name)+'</div><div class="conv-info"><div class="conv-name">'+cl.name+'</div><div class="conv-last">'+(last?last.content.substring(0,50)+'...':'Pas encore de messages')+'</div></div><div class="conv-right"><span class="badge badge-'+(cl.status||'pending')+'" style="font-size:9px">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span>'+(last?'<div class="conv-time">'+new Date(last.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div>':'')+'</div></div>';
     }
     html+='</div>';c.innerHTML=html;
