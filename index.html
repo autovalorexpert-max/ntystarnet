@@ -317,6 +317,28 @@ textarea.inp{resize:vertical;min-height:80px}select.inp{cursor:pointer}
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* COUPURE ÉLECTRIQUE */
+.coupure-panel{border-radius:var(--r2);padding:16px;margin-bottom:12px;border:2px solid}
+.coupure-on{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.4)}
+.coupure-off{background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.25)}
+.coupure-info{display:flex;align-items:center;gap:12px}
+.coupure-icon{font-size:28px;flex-shrink:0}
+.coupure-title{font-weight:700;font-size:15px}
+.coupure-on .coupure-title{color:#f87171}
+.coupure-off .coupure-title{color:#34d399}
+.coupure-sub{font-size:12px;color:var(--text3);margin-top:3px}
+
+/* PRESET MESSAGES */
+.preset-list{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.preset-item{padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;line-height:1.5}
+.preset-item:hover,.preset-item.selected{border-color:var(--accent2);background:rgba(59,130,246,0.07);color:var(--text)}
+
+/* NUMÉROS DE PAIEMENT AVEC NOMS */
+.pay-num-row{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.pay-num{font-family:var(--mono);font-size:17px;font-weight:700;color:#34d399;flex-shrink:0}
+.pay-num-name{font-size:12px;color:rgba(52,211,153,0.7);font-style:italic}
+
 </style>
 </head>
 <body>

@@ -1,20 +1,23 @@
 const SB_URL = 'https://bpeliducuuagffwlsjal.supabase.co';
 const SB_KEY = 'sb_publishable_3HKOfxQfItpFE8VYDIEULg_j550L4Hi';
 
-async function sb(table, method='GET', body=null, query=''){
-  const url = SB_URL+'/rest/v1/'+table+(query?'?'+query:'');
-  const headers = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
-  const res = await fetch(url, {method, headers, body: body?JSON.stringify(body):null});
+async function sb(table,method='GET',body=null,query=''){
+  const url=SB_URL+'/rest/v1/'+table+(query?'?'+query:'');
+  const headers={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  const res=await fetch(url,{method,headers,body:body?JSON.stringify(body):null});
   if(!res.ok){const e=await res.text();throw new Error(e);}
-  const txt = await res.text();
-  return txt ? JSON.parse(txt) : [];
+  const txt=await res.text();
+  return txt?JSON.parse(txt):[];
 }
 async function sbGet(t,q=''){return sb(t,'GET',null,q);}
 async function sbPost(t,d){return sb(t,'POST',d);}
 async function sbPatch(t,q,d){return sb(t,'PATCH',d,q);}
 async function sbDelete(t,q){return sb(t,'DELETE',null,q);}
 
-let me=null, selPlanName='100 Go', photoData=null, curChatId=null, curDetailId=null, curPayId=null;
+let me=null,selPlanName='100 Go',photoData=null,curChatId=null,curDetailId=null,curPayId=null;
+// Statut coupure électrique global (stocké localement pour l'admin)
+let coupureActive=localStorage.getItem('nty_coupure')==='true';
+let coupureMsg=localStorage.getItem('nty_coupure_msg')||'⚡ Coupure électrique en cours — La connexion WiFi est temporairement indisponible. Nous travaillons à rétablir le service.';
 
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function now(){return new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'});}
@@ -29,22 +32,18 @@ function togglePass(){const i=document.getElementById('login-pass');i.type=i.typ
 function initials(n){return(n||'??').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 function loading(el){if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><p>Chargement...</p></div>';}
 function toast(msg,type='success'){
-  const t=document.createElement('div');
-  t.className='toast toast-'+type;
-  t.innerHTML=msg;
+  const t=document.createElement('div');t.className='toast toast-'+type;t.innerHTML=msg;
   document.body.appendChild(t);
   setTimeout(()=>t.classList.add('show'),10);
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3500);
 }
 
 function initStars(){
-  const s=document.getElementById('stars');
-  if(!s)return;
-  for(let i=0;i<120;i++){
-    const el=document.createElement('div');
-    el.className='star';
-    const sz=Math.random()*2.5+0.5;
-    el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--delay:'+Math.random()*5+'s;--op:'+(0.2+Math.random()*0.8);
+  const s=document.getElementById('stars');if(!s)return;
+  for(let i=0;i<100;i++){
+    const el=document.createElement('div');el.className='star';
+    const sz=Math.random()*2+0.5;
+    el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--delay:'+Math.random()*5+'s;--op:'+(0.2+Math.random()*0.7);
     s.appendChild(el);
   }
 }
@@ -78,14 +77,18 @@ function cPage(page,btn){
     else if(page==='paiement')renderClientPaiement();
     else if(page==='messages')renderClientMessages();
     else if(page==='profil')renderClientProfil();
-  },100);
+  },50);
 }
 
 async function renderClientHome(){
   const c=document.getElementById('c-content');
   try{
-    const [cd,pays,tix]=await Promise.all([sbGet('clients','id=eq.'+me.id),sbGet('payments','client_id=eq.'+me.id+'&order=created_at.desc&limit=5'),sbGet('tickets','client_id=eq.'+me.id)]);
-    const u=cd[0]||me; me={...me,...u};
+    const [cd,pays,tix]=await Promise.all([
+      sbGet('clients','id=eq.'+me.id),
+      sbGet('payments','client_id=eq.'+me.id+'&order=created_at.desc&limit=5'),
+      sbGet('tickets','client_id=eq.'+me.id)
+    ]);
+    const u=cd[0]||me;me={...me,...u};
     const dl=daysLeft(u.expiry_date);
     const freeT=tix.filter(t=>!t.is_used);
     const h=new Date().getHours();
@@ -99,47 +102,37 @@ async function renderClientHome(){
     let html='<div class="fade-up">';
     html+='<div class="greeting"><div class="greeting-text">'+greet+'</div><div class="greeting-name">'+u.name+'</div></div>';
 
-    // ═══ NOTIFICATIONS IMPORTANTES ═══
-    let notifs=[];
-
-    // 1. Coupure électrique — toujours affichée
-    notifs.push({type:'info',icon:'⚡',title:'Info importante',msg:'En cas de <strong>coupure de courant ou panne électrique</strong> à la source de la connexion, votre accès WiFi sera temporairement interrompu. Ce n\'est pas lié à votre abonnement.'});
-
-    // 2. Dates d'abonnement précises
-    if(u.start_date&&u.expiry_date){
-      notifs.push({type:'info',icon:'📅',title:'Période d\'abonnement',msg:'Votre abonnement est valable du <strong>'+startFmt+'</strong> au <strong>'+endFmt+' à 23h59</strong>.'});
+    // ═══ COUPURE ÉLECTRIQUE (si active) ═══
+    if(coupureActive){
+      html+='<div class="notif-card notif-danger" style="border-width:2px"><div class="notif-icon">🔴</div><div class="notif-body"><div class="notif-title">Coupure en cours !</div><div class="notif-msg">'+coupureMsg+'</div></div></div>';
     }
 
-    // 3. 5 jours avant expiration
+    // ═══ ABONNEMENT NON PAYÉ ═══
+    if(u.status==='expired'||dl!==null&&dl<0){
+      html+='<div class="notif-card notif-danger" style="border-width:2px"><div class="notif-icon">🚫</div><div class="notif-body"><div class="notif-title">Connexion coupée automatiquement</div><div class="notif-msg">Votre abonnement a expiré le <strong>'+endFmt+'</strong>. Votre accès WiFi a été automatiquement suspendu. Renouvelez votre abonnement pour rétablir la connexion.</div></div></div>';
+    }
+
+    // ═══ EXPIRATION PROCHE ═══
     if(dl!==null&&dl<=5&&dl>0){
-      notifs.push({type:'warning',icon:'⏰',title:'Renouvellement urgent !',msg:'Votre abonnement expire le <strong>'+endFmt+' à 23h59</strong> dans <strong>'+dl+' jour'+(dl>1?'s':'')+'</strong>. Renouvelez maintenant pour éviter toute coupure de connexion !'});
+      html+='<div class="notif-card notif-warning"><div class="notif-icon">⏰</div><div class="notif-body"><div class="notif-title">Renouvellement urgent !</div><div class="notif-msg">Votre abonnement expire le <strong>'+endFmt+' à 23h59</strong> dans <strong>'+dl+' jour'+(dl>1?'s':'')+'</strong>. Sans renouvellement, votre connexion WiFi sera automatiquement coupée à cette date.</div></div></div>';
     }
 
-    // 4. Jour J expiration
+    // ═══ EXPIRE AUJOURD'HUI ═══
     if(dl===0){
-      notifs.push({type:'danger',icon:'🔴',title:'Expire aujourd\'hui !',msg:'Votre abonnement expire <strong>aujourd\'hui à 23h59</strong>. Renouvelez immédiatement pour ne pas perdre votre connexion !'});
+      html+='<div class="notif-card notif-danger"><div class="notif-icon">🔴</div><div class="notif-body"><div class="notif-title">Expire aujourd\'hui à 23h59 !</div><div class="notif-msg">Renouvelez immédiatement pour éviter la coupure automatique de votre connexion WiFi ce soir à 23h59.</div></div></div>';
     }
 
-    // 5. Expiré
-    if(dl!==null&&dl<0){
-      notifs.push({type:'danger',icon:'❌',title:'Abonnement expiré',msg:'Votre abonnement a expiré le <strong>'+endFmt+'</strong>. Veuillez contacter l\'administrateur pour renouveler.'});
-    }
-
-    // 6. Paiement en attente
+    // ═══ PAIEMENT EN ATTENTE ═══
     if(pays.some(p=>p.status==='pending')){
-      notifs.push({type:'info',icon:'💳',title:'Paiement en cours',msg:'Votre paiement est en cours de validation par l\'administrateur. Vous serez notifié dès que c\'est traité.'});
+      html+='<div class="notif-card notif-info"><div class="notif-icon">💳</div><div class="notif-body"><div class="notif-title">Paiement en cours de validation</div><div class="notif-msg">Votre paiement est en cours de validation par l\'administrateur. Vous recevrez votre ticket Mikrotik dès que c\'est traité.</div></div></div>';
     }
 
-    // 7. Plus de tickets
-    if(freeT.length===0&&u.status==='active'){
-      notifs.push({type:'danger',icon:'🎫',title:'Plus de tickets',msg:'Vous n\'avez plus de tickets disponibles. Contactez l\'administrateur.'});
+    // ═══ DATES D\'ABONNEMENT ═══
+    if(u.start_date&&u.expiry_date&&u.status==='active'){
+      html+='<div class="notif-card notif-info"><div class="notif-icon">📅</div><div class="notif-body"><div class="notif-title">Période d\'abonnement</div><div class="notif-msg">Du <strong>'+startFmt+'</strong> au <strong>'+endFmt+' à 23h59</strong>.</div></div></div>';
     }
 
-    notifs.forEach(n=>{
-      html+='<div class="notif-card notif-'+n.type+'"><div class="notif-icon">'+n.icon+'</div><div class="notif-body"><div class="notif-title">'+n.title+'</div><div class="notif-msg">'+n.msg+'</div></div></div>';
-    });
-
-    // ═══ CARTE STATUT ═══
+    // ═══ HERO CARD ═══
     html+='<div class="hero-card"><div class="hero-top"><div><div class="hero-label">ABONNEMENT</div><span class="badge badge-'+(u.status||'pending')+'">'+(statusMap[u.status||'pending'])+'</span></div><div class="hero-right"><div class="hero-label">PLAN</div><div class="hero-plan">'+(u.plan||'—')+'</div><div class="hero-price">'+(u.plan_price||'—')+' Ar/mois</div></div></div>';
     html+='<div class="hero-mid"><div><div class="hero-label">EXPIRATION</div><div class="hero-exp">'+(u.expiry_date?endFmt+' à 23h59':'—')+'</div></div><div class="hero-days-wrap"><div class="hero-label">JOURS RESTANTS</div><div class="hero-days" style="color:'+fillColor+'">'+(dl!==null&&dl>=0?dl:'—')+'</div></div></div>';
     if(dl!==null&&dl>=0)html+='<div class="expiry-track"><div class="expiry-fill" style="width:'+pct+'%;background:'+fillColor+'"></div></div>';
@@ -169,9 +162,23 @@ async function renderClientHome(){
 
 function renderClientPaiement(){
   const c=document.getElementById('c-content');photoData=null;
-  const plans=[{n:'100 Go',p:'40.000',d:'30 jours · 1 appareil',icon:'📱'},{n:'200 Go',p:'55.000',d:'30 jours · 1 appareil',icon:'💻'},{n:'Illimité 5 appareils',p:'65.000',d:'30 jours · 5 appareils',icon:'🏠'},{n:'Illimité 9+ appareils',p:'90.000',d:'30 jours · 9+ appareils',icon:'🏢'}];
+  const plans=[
+    {n:'100 Go',p:'40.000',d:'Valable 30 jours',icon:'📶'},
+    {n:'200 Go',p:'55.000',d:'Valable 30 jours',icon:'📶'},
+    {n:'Illimité 5 appareils',p:'65.000',d:'30 jours · jusqu\'à 5 appareils',icon:'🏠'},
+    {n:'Illimité 9+ appareils',p:'90.000',d:'30 jours · 9 appareils et plus',icon:'🏢'}
+  ];
+  const nums=[
+    {n:'0344127501',name:'Rojo Rindra'},
+    {n:'0346341775',name:'Rasoamanana Ny Tiana (NY)'},
+    {n:'0321825114',name:'Rasoamanana Ny Tiana (NY)'}
+  ];
   let html='<div class="fade-up"><div class="page-header"><div class="page-title">💳 Renouveler</div><div class="page-sub">Choisissez votre abonnement</div></div>';
-  html+='<div class="pay-box"><div class="pay-box-title">📲 Envoyez votre paiement sur</div><div class="pay-nums"><span class="pay-num">0344127501</span><span class="pay-num">0346341775</span><span class="pay-num">0321825114</span></div><div class="pay-box-sub">Puis remplissez le formulaire ci-dessous ↓</div></div>';
+  html+='<div class="pay-box"><div class="pay-box-title">📲 Envoyez votre paiement sur</div>';
+  nums.forEach(num=>{
+    html+='<div class="pay-num-row"><div class="pay-num">'+num.n+'</div><div class="pay-num-name">'+num.name+'</div></div>';
+  });
+  html+='<div class="pay-box-sub">Puis remplissez le formulaire ci-dessous ↓</div></div>';
   html+='<div class="section-card"><div class="section-head">Choisir un plan</div>';
   plans.forEach((pl,i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+pl.n+'\')"><div class="plan-icon">'+pl.icon+'</div><div class="plan-info"><div class="plan-name">'+pl.n+'</div><div class="plan-desc">'+pl.d+'</div></div><div class="plan-price">'+pl.p+' Ar</div></div>';});
   html+='</div><div class="section-card"><div class="section-head">Détails du paiement</div>';
@@ -196,7 +203,7 @@ async function submitPay(){
     await sbPost('payments',{client_id:me.id,client_name:me.name,plan:selPlanName,amount:prices[selPlanName],payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData});
     await sbPatch('clients','id=eq.'+me.id,{status:'pending'});
     me.status='pending';photoData=null;
-    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:16px">✅</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande envoyée !</div><p style="color:var(--text2);font-size:13px;margin-bottom:20px">L\'administrateur va valider votre paiement et vous envoyer votre ticket Mikrotik dès que possible.</p><button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">OK ✓</button></div>');
+    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:16px">✅</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande envoyée !</div><p style="color:var(--text2);font-size:13px;margin-bottom:20px">L\'administrateur va valider votre paiement et vous envoyer votre ticket Mikrotik.</p><button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">OK ✓</button></div>');
   }catch(e){toast('Erreur lors de l\'envoi. Réessayez.','error');}
 }
 
@@ -217,8 +224,7 @@ async function renderClientMessages(){
 }
 
 async function cSendMsg(){
-  const inp=document.getElementById('c-msg-inp');
-  if(!inp||!inp.value.trim())return;
+  const inp=document.getElementById('c-msg-inp');if(!inp||!inp.value.trim())return;
   const txt=inp.value.trim();inp.value='';
   try{await sbPost('messages',{client_id:me.id,sender:'client',sender_name:me.name,content:txt});renderClientMessages();}
   catch(e){inp.value=txt;toast('Erreur envoi','error');}
@@ -251,6 +257,10 @@ async function changePass(){
   }catch(e){toast('Erreur','error');}
 }
 
+// ═══════════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════════
+
 function aPage(page,btn){
   document.querySelectorAll('#page-admin .nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
@@ -261,7 +271,7 @@ function aPage(page,btn){
     else if(page==='paiements')renderAdminPaiements();
     else if(page==='messages')renderAdminMessages();
     else if(page==='stats')renderAdminStats();
-  },100);
+  },50);
 }
 
 async function renderAdminDashboard(){
@@ -274,9 +284,26 @@ async function renderAdminDashboard(){
     const soon=clients.filter(x=>{const dl=daysLeft(x.expiry_date);return dl!==null&&dl>=0&&dl<=5;});
 
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">📊 Dashboard</div><div class="page-sub">Vue d\'ensemble NTY Starnet</div></div>';
-    html+='<div class="revenue-hero"><div class="revenue-label">💰 REVENUS TOTAUX VALIDÉS</div><div class="revenue-amount">'+revenue.toLocaleString('fr')+' <span>Ar</span></div><div class="revenue-sub">'+payments.filter(p=>p.status==='validated').length+' paiements validés · '+clients.filter(x=>x.status==='active').length+' clients actifs</div></div>';
+
+    // ═══ BOUTON COUPURE ÉLECTRIQUE ═══
+    html+='<div class="coupure-panel '+(coupureActive?'coupure-on':'coupure-off')+'">';
+    html+='<div class="coupure-info"><div class="coupure-icon">'+(coupureActive?'🔴':'🟢')+'</div><div><div class="coupure-title">'+(coupureActive?'Coupure électrique ACTIVE':'Connexion normale')+'</div><div class="coupure-sub">'+(coupureActive?'Les clients voient une alerte rouge':'Aucune alerte envoyée aux clients')+'</div></div></div>';
+    html+='<div style="display:flex;gap:8px;margin-top:12px">';
+    if(coupureActive){
+      html+='<button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="toggleCoupure(false)">🟢 Rétablir la connexion</button>';
+    } else {
+      html+='<button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="toggleCoupure(true)">🔴 Signaler coupure</button>';
+    }
+    html+='<button class="btn btn-ghost" style="width:auto;padding:10px 14px;margin:0;font-size:13px" onclick="showCoupureEdit()">✏️ Modifier message</button>';
+    html+='</div></div>';
+
+    // ═══ REVENUE ═══
+    html+='<div class="revenue-hero"><div class="revenue-label">💰 REVENUS TOTAUX VALIDÉS</div><div class="revenue-amount">'+revenue.toLocaleString('fr')+' <span>Ar</span></div><div class="revenue-sub">'+payments.filter(p=>p.status==='validated').length+' paiements · '+clients.filter(x=>x.status==='active').length+' clients actifs</div></div>';
+
+    // ═══ STATS ═══
     html+='<div class="stats-grid"><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--accent)">'+clients.length+'</div><div class="stat-card-lbl">Total clients</div></div><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--success)">'+clients.filter(x=>x.status==='active').length+'</div><div class="stat-card-lbl">Actifs</div></div><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--warning)">'+pPending.length+'</div><div class="stat-card-lbl">Paiements en attente</div></div><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--danger)">'+clients.filter(x=>x.status==='expired').length+'</div><div class="stat-card-lbl">Expirés</div></div></div>';
 
+    // ═══ PAIEMENTS EN ATTENTE ═══
     if(pPending.length>0){
       html+='<div class="section-card"><div class="section-head-row"><div class="section-head">🔔 Paiements en attente</div><span class="count-badge">'+pPending.length+'</span></div>';
       for(const p of pPending.slice(0,3)){
@@ -287,6 +314,7 @@ async function renderAdminDashboard(){
       html+='</div>';
     }
 
+    // ═══ EXPIRENT BIENTÔT ═══
     if(soon.length>0){
       html+='<div class="section-card"><div class="section-head">⏰ Expirent dans 5 jours ou moins</div>';
       soon.forEach(x=>{const dl=daysLeft(x.expiry_date);html+='<div class="info-row"><div class="info-key"><div style="font-weight:600">'+x.name+'</div><div style="font-size:11px;color:var(--text3)">'+x.plan+' · expire le '+fmtDate(x.expiry_date)+'</div></div><div class="info-val" style="color:var(--warning);font-family:var(--mono);font-weight:700">'+dl+'j</div></div>';});
@@ -294,7 +322,32 @@ async function renderAdminDashboard(){
     }
     html+='</div>';
     c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p><button class="btn btn-ghost" onclick="aPage(\'dashboard\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Réessayer</button></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'dashboard\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Réessayer</button></p></div>';}
+}
+
+function toggleCoupure(active){
+  coupureActive=active;
+  localStorage.setItem('nty_coupure',active.toString());
+  toast(active?'🔴 Alerte coupure activée — Les clients voient l\'alerte !':'🟢 Connexion rétablie — Alerte supprimée pour les clients !',active?'error':'success');
+  aPage('dashboard',null);
+}
+
+function showCoupureEdit(){
+  showModal('<div class="modal-title">✏️ Message de coupure <button class="modal-close" onclick="closeModal()">×</button></div><p style="font-size:13px;color:var(--text2);margin-bottom:14px">Ce message s\'affichera en rouge sur le dashboard des clients quand vous activez l\'alerte coupure.</p><label class="inp-label">Choisir un message prédéfini</label><div class="preset-list"><div class="preset-item" onclick="setPreset(this,\'⚡ Coupure électrique en cours — La connexion WiFi est temporairement indisponible. Nous travaillons à rétablir le service.\')">⚡ Coupure électrique générale</div><div class="preset-item" onclick="setPreset(this,\'🔧 Maintenance en cours — Votre connexion WiFi sera rétablie dans quelques heures. Merci pour votre patience.\')">🔧 Maintenance technique</div><div class="preset-item" onclick="setPreset(this,\'🌩️ Panne due aux conditions météorologiques — La connexion sera rétablie dès que possible.\')">🌩️ Panne météo</div><div class="preset-item" onclick="setPreset(this,\'⚡ Coupure électrique dans votre zone — La connexion WiFi reprendra automatiquement dès le retour du courant.\')">⚡ Coupure zone spécifique</div></div><label class="inp-label" style="margin-top:14px">Ou écrire un message personnalisé</label><textarea class="inp" id="coupure-msg-inp" rows="3">'+coupureMsg+'</textarea><button class="btn btn-primary btn-full" onclick="saveCoupureMsg()">💾 Enregistrer le message</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+}
+
+function setPreset(el,msg){
+  document.querySelectorAll('.preset-item').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('coupure-msg-inp').value=msg;
+}
+
+function saveCoupureMsg(){
+  const msg=document.getElementById('coupure-msg-inp').value.trim();
+  if(!msg){toast('Entrez un message','error');return;}
+  coupureMsg=msg;
+  localStorage.setItem('nty_coupure_msg',msg);
+  closeModal();toast('✅ Message enregistré !');
 }
 
 async function renderAdminClients(search=''){
@@ -303,20 +356,19 @@ async function renderAdminClients(search=''){
     let q='order=created_at.desc';
     if(search)q+='&or=(name.ilike.*'+search+'*,username.ilike.*'+search+'*)';
     const clients=await sbGet('clients',q);
-    let html='<div class="fade-up"><div class="page-header-row"><div><div class="page-title">👥 Clients</div><div class="page-sub">'+clients.length+' client(s) enregistré(s)</div></div><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div>';
-    html+='<div class="search-box"><span class="search-icon">🔍</span><input class="search-inp" type="text" placeholder="Rechercher un client..." value="'+search+'" oninput="renderAdminClients(this.value)"></div>';
-    if(!clients.length)html+='<div class="empty"><div class="empty-icon">👤</div><p>Aucun client trouvé</p></div>';
+    let html='<div class="fade-up"><div class="page-header-row"><div><div class="page-title">👥 Clients</div><div class="page-sub">'+clients.length+' client(s)</div></div><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div>';
+    html+='<div class="search-box"><span class="search-icon">🔍</span><input class="search-inp" type="text" placeholder="Rechercher..." value="'+search+'" oninput="renderAdminClients(this.value)"></div>';
+    if(!clients.length)html+='<div class="empty"><div class="empty-icon">👤</div><p>Aucun client</p></div>';
     else{
       html+='<div class="client-list">';
       for(const cl of clients){
         const tix=await sbGet('tickets','client_id=eq.'+cl.id+'&is_used=eq.false');
         const dl=daysLeft(cl.expiry_date);
-        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">@'+cl.username+' · '+tix.length+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j restants':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
+        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">@'+cl.username+' · '+tix.length+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
       }
       html+='</div>';
     }
-    html+='</div>';
-    c.innerHTML=html;
+    html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
 }
 
@@ -339,8 +391,7 @@ async function renderAdminPaiements(filter='pending'){
       if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:12px&quot;>\')">📷 Voir la preuve</button>';
       html+='</div>';
     }
-    html+='</div>';
-    c.innerHTML=html;
+    html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
 }
 
@@ -352,8 +403,8 @@ async function openValidate(payId){
     let html='<div class="modal-title">✅ Valider le paiement <button class="modal-close" onclick="closeModal()">×</button></div>';
     html+='<div class="modal-client">Client : <strong>'+pay.client_name+'</strong></div>';
     html+=[['Plan',pay.plan],['Montant',(pay.amount||'—')+' Ar'],['Date paiement',fmtDate(pay.payment_date)],['Référence',pay.reference||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
-    if(pay.photo_url)html+='<div style="margin:12px 0"><div class="inp-label">Preuve de paiement</div><img src="'+pay.photo_url+'" style="width:100%;border-radius:12px;max-height:180px;object-fit:cover"></div>';
-    html+='<div class="ticket-preview-big">'+(next?'<div class="tp-label">🎫 TICKET QUI SERA ENVOYÉ</div><div class="tp-code">'+next.code+'</div>':'<div style="color:var(--danger);font-size:13px">⚠️ Aucun ticket disponible. Ajoutez des tickets dans la fiche client.</div>')+'</div>';
+    if(pay.photo_url)html+='<div style="margin:12px 0"><div class="inp-label">Preuve</div><img src="'+pay.photo_url+'" style="width:100%;border-radius:12px;max-height:180px;object-fit:cover"></div>';
+    html+='<div class="ticket-preview-big">'+(next?'<div class="tp-label">🎫 TICKET QUI SERA ENVOYÉ</div><div class="tp-code">'+next.code+'</div>':'<div style="color:var(--danger);font-size:13px">⚠️ Aucun ticket. Ajoutez-en dans la fiche client.</div>')+'</div>';
     if(next)html+='<button class="btn btn-success btn-full" onclick="validatePay(\''+payId+'\',\''+next.id+'\',\''+next.code+'\',\''+pay.client_id+'\')">✓ Valider et envoyer le ticket</button>';
     html+='<button class="btn btn-danger btn-full" onclick="closeModal();rejectConfirm()">✗ Refuser</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>';
     showModal(html);
@@ -373,12 +424,12 @@ async function validatePay(payId,ticketId,ticketCode,clientId){
       sbPost('messages',{client_id:clientId,sender:'admin',sender_name:'Admin',content:'✅ Paiement validé !\n\n🎫 Votre ticket Mikrotik : '+ticketCode+'\n\n📅 Valable du '+startFmt+' au '+endFmt+' à 23h59.\n\nConnectez-vous avec ce code sur le réseau NTY Starnet. 🌐'})
     ]);
     closeModal();
-    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:12px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Ticket envoyé !</div><div class="ticket-preview-big"><div class="tp-label">TICKET ENVOYÉ AU CLIENT</div><div class="tp-code">'+ticketCode+'</div><div style="font-size:12px;color:var(--text3);margin-top:8px">Du '+startFmt+' au '+endFmt+' à 23h59</div></div><button class="btn btn-primary btn-full" onclick="closeModal();aPage(\'paiements\',null)">OK ✓</button></div>');
+    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:12px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Ticket envoyé !</div><div class="ticket-preview-big"><div class="tp-label">TICKET ENVOYÉ</div><div class="tp-code">'+ticketCode+'</div><div style="font-size:12px;color:var(--text3);margin-top:8px">Du '+startFmt+' au '+endFmt+' à 23h59</div></div><button class="btn btn-primary btn-full" onclick="closeModal();aPage(\'paiements\',null)">OK ✓</button></div>');
   }catch(e){toast('Erreur lors de la validation','error');}
 }
 
 function rejectConfirm(){
-  showModal('<div class="modal-title">❌ Refuser <button class="modal-close" onclick="closeModal()">×</button></div><p style="font-size:13px;color:var(--text2);margin-bottom:14px">Le client recevra un message de refus.</p><label class="inp-label">Motif du refus (optionnel)</label><input class="inp" type="text" id="reject-reason" placeholder="Ex: Référence incorrecte, montant insuffisant..."><button class="btn btn-danger btn-full" onclick="doReject()">✗ Confirmer le refus</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+  showModal('<div class="modal-title">❌ Refuser <button class="modal-close" onclick="closeModal()">×</button></div><p style="font-size:13px;color:var(--text2);margin-bottom:14px">Le client recevra un message de refus.</p><label class="inp-label">Motif (optionnel)</label><input class="inp" type="text" id="reject-reason" placeholder="Ex: Référence incorrecte, montant insuffisant..."><button class="btn btn-danger btn-full" onclick="doReject()">✗ Confirmer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
 }
 
 async function doReject(){
@@ -387,7 +438,7 @@ async function doReject(){
     const pays=await sbGet('payments','id=eq.'+curPayId);const pay=pays[0];
     await Promise.all([
       sbPatch('payments','id=eq.'+curPayId,{status:'rejected'}),
-      sbPost('messages',{client_id:pay.client_id,sender:'admin',sender_name:'Admin',content:'❌ Votre paiement du '+fmtDate(pay.payment_date)+' a été refusé.'+(reason?'\n\nMotif: '+reason:'')+'\n\nVeuillez nous recontacter pour plus d\'informations.'})
+      sbPost('messages',{client_id:pay.client_id,sender:'admin',sender_name:'Admin',content:'❌ Votre paiement du '+fmtDate(pay.payment_date)+' a été refusé.'+(reason?'\n\nMotif: '+reason:'')+'\n\nContactez-nous pour plus d\'informations.'})
     ]);
     closeModal();toast('Paiement refusé');aPage('paiements',null);
   }catch(e){toast('Erreur','error');}
@@ -396,53 +447,54 @@ async function doReject(){
 async function openDetail(id){
   curDetailId=id;
   try{
-    const [clients,tickets,payments]=await Promise.all([sbGet('clients','id=eq.'+id),sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc'),sbGet('payments','client_id=eq.'+id+'&order=created_at.desc&limit=5')]);
+    const [clients,tickets]=await Promise.all([sbGet('clients','id=eq.'+id),sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc')]);
     const cl=clients[0];const freeT=tickets.filter(t=>!t.is_used);const dl=daysLeft(cl.expiry_date);
     let html='<div class="modal-title"><div style="display:flex;align-items:center;gap:10px"><div class="modal-avatar">'+initials(cl.name)+'</div><div><div>'+cl.name+'</div><div style="font-size:11px;color:var(--text3)">@'+cl.username+'</div></div></div><button class="modal-close" onclick="closeModal()">×</button></div>';
-    html+='<div class="dtabs"><button class="dtab active" onclick="dtab(\'info\',this)">Infos</button><button class="dtab" onclick="dtab(\'tickets\',this)">Tickets ('+freeT.length+' dispo)</button><button class="dtab" onclick="dtab(\'edit\',this)">Modifier</button></div>';
+    html+='<div class="dtabs"><button class="dtab active" onclick="dtab(\'info\',this)">Infos</button><button class="dtab" onclick="dtab(\'tickets\',this)">Tickets ('+freeT.length+')</button><button class="dtab" onclick="dtab(\'edit\',this)">Modifier</button></div>';
     html+='<div id="dt-info">';
     html+=[['Statut','<span class="badge badge-'+(cl.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'}[cl.status||'pending'])+'</span>'],['Plan',cl.plan||'—'],['Prix',(cl.plan_price||'—')+' Ar/mois'],['Début',fmtDate(cl.start_date)],['Fin',(cl.expiry_date?fmtDate(cl.expiry_date)+' à 23h59':'—')],['Jours restants',dl!==null&&dl>=0?dl+' jours':'—'],['Tickets dispo',freeT.length+' / '+tickets.length],['Téléphone',cl.phone||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
     html+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'active\')">✓ Activer</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'expired\')">✗ Expirer</button></div>';
     html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')">🗑 Supprimer ce client</button></div>';
-    html+='<div id="dt-tickets" style="display:none"><label class="inp-label">Ajouter des tickets (un par ligne)</label><textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><button class="btn btn-success btn-full" onclick="addMoreTickets(\''+id+'\')">+ Ajouter ces tickets</button><div style="margin-top:12px">';
+    html+='<div id="dt-tickets" style="display:none"><label class="inp-label">Ajouter des tickets (un par ligne)</label><textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><button class="btn btn-success btn-full" onclick="addMoreTickets(\''+id+'\')">+ Ajouter</button><div style="margin-top:12px">';
     if(!tickets.length)html+='<div class="empty"><div class="empty-icon">🎫</div><p>Aucun ticket</p></div>';
     else tickets.forEach((t,i)=>{html+='<div class="ticket-row '+(t.is_used?'ticket-used':'')+'"><span class="ticket-row-code">'+(i+1)+'. '+t.code+(t.is_current?' 👈':'')+'</span><span class="tag '+(t.is_current?'tag-cur':t.is_used?'tag-used':'tag-free')+'">'+(t.is_current?'Actuel':t.is_used?'Utilisé':'Dispo')+'</span></div>';});
     html+='</div></div>';
-    html+='<div id="dt-edit" style="display:none"><label class="inp-label">Nom complet</label><input class="inp" type="text" id="edit-name" value="'+cl.name+'"><label class="inp-label">Username</label><input class="inp" type="text" id="edit-user" value="'+cl.username+'"><label class="inp-label">Nouveau mot de passe (vide = pas de changement)</label><input class="inp" type="password" id="edit-pass" placeholder="Nouveau mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'"><label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimité 5 appareils','Illimité 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select><button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
+    html+='<div id="dt-edit" style="display:none"><label class="inp-label">Nom complet</label><input class="inp" type="text" id="edit-name" value="'+cl.name+'"><label class="inp-label">Username</label><input class="inp" type="text" id="edit-user" value="'+cl.username+'"><label class="inp-label">Nouveau mot de passe (vide = inchangé)</label><input class="inp" type="password" id="edit-pass" placeholder="Nouveau mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'"><label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimité 5 appareils','Illimité 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select><button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
     showModal(html);
-  }catch(e){toast('Erreur chargement client','error');}
+  }catch(e){toast('Erreur','error');}
 }
 
 function dtab(tab,btn){document.querySelectorAll('#modal-content .dtab').forEach(t=>t.classList.remove('active'));if(btn)btn.classList.add('active');['info','tickets','edit'].forEach(t=>{const el=document.getElementById('dt-'+t);if(el)el.style.display=t===tab?'block':'none';});}
 async function quickStatus(id,status){try{await sbPatch('clients','id=eq.'+id,{status});closeModal();toast('Statut mis à jour !');renderAdminClients();}catch(e){toast('Erreur','error');}}
-async function deleteClient(id,name){if(!confirm('Supprimer "'+name+'" ? Action irréversible.'))return;try{await sbDelete('clients','id=eq.'+id);closeModal();toast('Client supprimé');renderAdminClients();}catch(e){toast('Erreur suppression','error');}}
-async function addMoreTickets(clientId){const raw=document.getElementById('new-tickets-inp')?.value.trim();if(!raw){toast('Entrez au moins un ticket.','error');return;}const codes=raw.split('\n').map(t=>t.trim()).filter(t=>t);try{for(const code of codes){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}toast('✅ '+codes.length+' ticket(s) ajouté(s) !');openDetail(clientId);}catch(e){toast('Erreur ajout tickets','error');}}
+async function deleteClient(id,name){if(!confirm('Supprimer "'+name+'" ? Irréversible.'))return;try{await sbDelete('clients','id=eq.'+id);closeModal();toast('Client supprimé');renderAdminClients();}catch(e){toast('Erreur','error');}}
+async function addMoreTickets(clientId){const raw=document.getElementById('new-tickets-inp')?.value.trim();if(!raw){toast('Entrez un ticket','error');return;}const codes=raw.split('\n').map(t=>t.trim()).filter(t=>t);try{for(const code of codes){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}toast('✅ '+codes.length+' ticket(s) ajouté(s) !');openDetail(clientId);}catch(e){toast('Erreur','error');}}
+
 async function saveClientEdit(id){
   const name=document.getElementById('edit-name').value.trim();const user=document.getElementById('edit-user').value.trim().toLowerCase();const pass=document.getElementById('edit-pass').value;const phone=document.getElementById('edit-phone').value.trim();const plan=document.getElementById('edit-plan').value;
   const prices={'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'};
   if(!name||!user){toast('Nom et username requis','error');return;}
   const updates={name,username:user,phone,plan,plan_price:prices[plan]};
   if(pass){if(pass.length<4){toast('Mot de passe trop court','error');return;}updates.password=pass;}
-  try{await sbPatch('clients','id=eq.'+id,updates);closeModal();toast('✅ Client modifié !'+(pass?' Nouveau MDP: '+pass:''));renderAdminClients();}
+  try{await sbPatch('clients','id=eq.'+id,updates);closeModal();toast('✅ Client modifié !'+(pass?' MDP: '+pass:''));renderAdminClients();}
   catch(e){toast('Erreur. Username peut-être déjà utilisé.','error');}
 }
 
 function showAddClient(){
-  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username * (pour se connecter)</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass" placeholder="Choisir un mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimité 5 appareils</option><option>Illimité 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;GHI789-RST"></textarea><p style="font-size:11px;color:var(--text3);margin-bottom:12px">💡 Les tickets sont envoyés un par un à chaque paiement validé.</p><button class="btn btn-primary btn-full" onclick="addClient()">✓ Créer le client</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass" placeholder="Choisir un mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimité 5 appareils</option><option>Illimité 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><p style="font-size:11px;color:var(--text3);margin-bottom:12px">💡 Envoyés un par un à chaque paiement validé.</p><button class="btn btn-primary btn-full" onclick="addClient()">✓ Créer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
 }
 
 async function addClient(){
   const name=document.getElementById('n-name').value.trim();const user=document.getElementById('n-user').value.trim().toLowerCase();const pass=document.getElementById('n-pass').value;const phone=document.getElementById('n-phone').value.trim();const plan=document.getElementById('n-plan').value;const raw=document.getElementById('n-tickets').value.trim();
   if(!name||!user||!pass){toast('Remplissez nom, username et mot de passe.','error');return;}
-  if(!raw){toast('Ajoutez au moins un ticket Mikrotik.','error');return;}
+  if(!raw){toast('Ajoutez au moins un ticket.','error');return;}
   const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
   const prices={'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'};
   try{
-    const newClient=await sbPost('clients',{username:user,password:pass,name,phone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
-    const clientId=newClient[0].id;
+    const nc=await sbPost('clients',{username:user,password:pass,name,phone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
+    const clientId=nc[0].id;
     for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
     closeModal();
-    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:12px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:12px">Client créé !</div><div class="info-box"><div class="info-row"><div class="info-key">Nom</div><div class="info-val">'+name+'</div></div><div class="info-row"><div class="info-key">Username</div><div class="info-val" style="font-family:var(--mono)">'+user+'</div></div><div class="info-row"><div class="info-key">Mot de passe</div><div class="info-val" style="font-family:var(--mono)">'+pass+'</div></div><div class="info-row"><div class="info-key">Tickets</div><div class="info-val">'+tickets.length+' ticket(s)</div></div></div><button class="btn btn-primary btn-full" style="margin-top:12px" onclick="closeModal();renderAdminClients()">OK ✓</button></div>');
+    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:12px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:12px">Client créé !</div><div class="info-box"><div class="info-row"><div class="info-key">Nom</div><div class="info-val">'+name+'</div></div><div class="info-row"><div class="info-key">Username</div><div class="info-val" style="font-family:var(--mono)">'+user+'</div></div><div class="info-row"><div class="info-key">Mot de passe</div><div class="info-val" style="font-family:var(--mono)">'+pass+'</div></div><div class="info-row"><div class="info-key">Tickets</div><div class="info-val">'+tickets.length+'</div></div></div><button class="btn btn-primary btn-full" style="margin-top:12px" onclick="closeModal();renderAdminClients()">OK ✓</button></div>');
   }catch(e){toast('Erreur. Username peut-être déjà utilisé.','error');}
 }
 
@@ -468,7 +520,7 @@ async function openAdminChat(clientId,clientName){
     html+='<div class="msg-list" id="admin-msg-list" style="max-height:300px">';
     if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Pas encore de messages</p></div>';
     else msgs.forEach(m=>{const mine=m.sender==='admin';html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'">'+(mine?'':'<div style="font-size:10px;color:var(--text3);margin-bottom:2px">'+m.sender_name+'</div>')+'<div class="bubble bubble-'+(mine?'sent':'recv')+'">'+m.content.replace(/\n/g,'<br>')+'</div><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';});
-    html+='</div><div class="chat-inp"><input class="chat-inp-field" type="text" id="a-msg-inp" placeholder="Répondre à '+clientName+'..." onkeydown="if(event.key===\'Enter\')aSendMsg()"><button class="chat-send-btn" onclick="aSendMsg()">→</button></div>';
+    html+='</div><div class="chat-inp"><input class="chat-inp-field" type="text" id="a-msg-inp" placeholder="Répondre..." onkeydown="if(event.key===\'Enter\')aSendMsg()"><button class="chat-send-btn" onclick="aSendMsg()">→</button></div>';
     showModal(html);
     setTimeout(()=>{const el=document.getElementById('admin-msg-list');if(el)el.scrollTop=el.scrollHeight;},100);
   }catch(e){toast('Erreur','error');}
@@ -478,7 +530,7 @@ async function aSendMsg(){
   const inp=document.getElementById('a-msg-inp');if(!inp||!inp.value.trim())return;
   const txt=inp.value.trim();const nameEl=document.querySelector('#modal-content .modal-title div');const name=nameEl?nameEl.textContent.replace('💬 ',''):'Client';inp.value='';
   try{await sbPost('messages',{client_id:curChatId,sender:'admin',sender_name:'Admin',content:txt});openAdminChat(curChatId,name);}
-  catch(e){inp.value=txt;toast('Erreur envoi','error');}
+  catch(e){inp.value=txt;toast('Erreur','error');}
 }
 
 async function renderAdminStats(){
@@ -489,21 +541,14 @@ async function renderAdminStats(){
     const revenue=validated.reduce((s,p)=>s+(parseInt((p.amount||'0').replace('.',''))||0),0);
     const total=clients.length||1;
     const planCount={};clients.forEach(cl=>{if(cl.plan)planCount[cl.plan]=(planCount[cl.plan]||0)+1;});
-    let html='<div class="fade-up"><div class="page-header"><div class="page-title">📈 Statistiques</div><div class="page-sub">Vue globale de votre réseau</div></div>';
-    html+='<div class="revenue-hero"><div class="revenue-label">💰 REVENUS TOTAUX VALIDÉS</div><div class="revenue-amount">'+revenue.toLocaleString('fr')+' <span>Ar</span></div><div class="revenue-sub">'+validated.length+' paiements · '+clients.filter(x=>x.status==='active').length+' clients actifs sur '+clients.length+'</div></div>';
+    let html='<div class="fade-up"><div class="page-header"><div class="page-title">📈 Statistiques</div></div>';
+    html+='<div class="revenue-hero"><div class="revenue-label">💰 REVENUS TOTAUX</div><div class="revenue-amount">'+revenue.toLocaleString('fr')+' <span>Ar</span></div><div class="revenue-sub">'+validated.length+' paiements validés</div></div>';
     html+='<div class="stats-grid"><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--accent)">'+clients.length+'</div><div class="stat-card-lbl">Total clients</div></div><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--success)">'+clients.filter(x=>x.status==='active').length+'</div><div class="stat-card-lbl">Actifs</div></div><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--warning)">'+payments.filter(p=>p.status==='pending').length+'</div><div class="stat-card-lbl">En attente</div></div><div class="stat-card-admin"><div class="stat-card-num" style="color:var(--purple)">'+payments.length+'</div><div class="stat-card-lbl">Total paiements</div></div></div>';
-    html+='<div class="section-card"><div class="section-head">Répartition des clients</div>';
-    [{l:'Actifs',v:clients.filter(x=>x.status==='active').length,col:'var(--success)'},{l:'En attente',v:clients.filter(x=>x.status==='pending').length,col:'var(--warning)'},{l:'Expirés',v:clients.filter(x=>x.status==='expired').length,col:'var(--danger)'}].forEach(s=>{
-      const pct=Math.round(s.v/total*100);
-      html+='<div class="prog-wrap"><div class="prog-label"><span>'+s.l+'</span><span class="prog-val">'+s.v+' ('+pct+'%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+s.col+'"></div></div></div>';
-    });
+    html+='<div class="section-card"><div class="section-head">Répartition clients</div>';
+    [{l:'Actifs',v:clients.filter(x=>x.status==='active').length,col:'var(--success)'},{l:'En attente',v:clients.filter(x=>x.status==='pending').length,col:'var(--warning)'},{l:'Expirés',v:clients.filter(x=>x.status==='expired').length,col:'var(--danger)'}].forEach(s=>{const pct=Math.round(s.v/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+s.l+'</span><span class="prog-val">'+s.v+' ('+pct+'%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+s.col+'"></div></div></div>';});
     html+='</div>';
-    if(Object.keys(planCount).length>0){
-      html+='<div class="section-card"><div class="section-head">Répartition par plan</div>';
-      Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+' client'+(count>1?'s':'')+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});
-      html+='</div>';
-    }
-    html+='<div class="section-card"><div class="section-head">🔐 Sécurité admin</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
+    if(Object.keys(planCount).length>0){html+='<div class="section-card"><div class="section-head">Par plan</div>';Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});html+='</div>';}
+    html+='<div class="section-card"><div class="section-head">🔐 Sécurité</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
 }
