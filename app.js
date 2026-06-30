@@ -92,7 +92,12 @@ async function renderClientHome(){
     const dl=daysLeft(u.expiry_date);
     const freeT=tix.filter(t=>!t.is_used);
     const h=new Date().getHours();
-    const greet=h<5?'Bonne nuit 🌙':h<12?'Bonjour ☀️':h<18?'Bon après-midi 🌤':'Bonsoir 🌆';
+    const greetMorning=['Prêt à conquérir Internet ? 🚀','Bonjour, votre WiFi vous attend ! 📶','Belle journée connectée à venir ☀️'];
+    const greetAfternoon=['Bon après-midi connecté ! 🌤','La connexion ne s\'arrête jamais 💪','Tout roule de votre côté ? 📡'];
+    const greetEvening=['Bonsoir, profitez de votre soirée 🌆','Le réseau veille sur vous 🛡️','Une bonne connexion pour bien finir 🌟'];
+    const greetNight=['Bonne nuit, on reste connectés 🌙','Le WiFi ne dort jamais 😴','Repos bien mérité ⭐'];
+    const greetPool=h<5?greetNight:h<12?greetMorning:h<18?greetAfternoon:greetEvening;
+    const greet=greetPool[Math.floor(Math.random()*greetPool.length)];
     const pct=dl!==null&&dl>0?Math.min(100,Math.round(dl/30*100)):0;
     const fillColor=pct>60?'var(--success)':pct>25?'var(--warning)':'var(--danger)';
     const statusMap={active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'};
@@ -217,7 +222,8 @@ async function submitPay(){
     await sbPost('payments',{client_id:me.id,client_name:me.name,plan:selPlanName,amount:prices[selPlanName],payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData});
     await sbPatch('clients','id=eq.'+me.id,{status:'pending'});
     me.status='pending';photoData=null;
-    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:16px">✅</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande envoyée !</div><p style="color:var(--text2);font-size:13px;margin-bottom:20px">L\'administrateur va valider votre paiement et vous envoyer votre ticket Mikrotik.</p><button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">OK ✓</button></div>');
+    launchConfetti();
+    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:16px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande envoyée !</div><p style="color:var(--text2);font-size:13px;margin-bottom:20px">Merci pour votre confiance ! L\'administrateur va valider votre paiement et vous envoyer votre ticket Mikrotik très vite.</p><button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">Génial, merci ! ✓</button></div>');
   }catch(e){toast('Erreur lors de l\'envoi. Réessayez.','error');}
 }
 
@@ -246,7 +252,17 @@ async function cSendMsg(){
 
 function renderClientProfil(){
   const u=me;const c=document.getElementById('c-content');
-  let html='<div class="fade-up"><div class="profile-hero"><div class="profile-avatar">'+initials(u.name)+'</div><div class="profile-name">'+u.name+'</div><div class="profile-username">@'+u.username+'</div><span class="badge badge-'+(u.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'}[u.status||'pending'])+'</span></div>';
+  const joinDays=u.join_date?Math.floor((new Date()-new Date(u.join_date))/(1000*60*60*24)):0;
+  let loyaltyBadge='';
+  if(joinDays>=365)loyaltyBadge='<div class="loyalty-badge loyalty-legend">👑 Légende NTY</div>';
+  else if(joinDays>=180)loyaltyBadge='<div class="loyalty-badge loyalty-vip">💎 Client VIP</div>';
+  else if(joinDays>=90)loyaltyBadge='<div class="loyalty-badge loyalty-fidele">⭐ Client fidèle</div>';
+  else loyaltyBadge='<div class="loyalty-badge loyalty-new">🌱 Nouveau membre</div>';
+  let html='<div class="fade-up"><div class="profile-hero" onclick="easterEgg(this)"><div class="profile-avatar">'+initials(u.name)+'</div><div class="profile-name">'+u.name+'</div><div class="profile-username">@'+u.username+'</div>'+loyaltyBadge+'<div style="margin-top:8px"><span class="badge badge-'+(u.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'}[u.status||'pending'])+'</span></div></div>';
+  if(joinDays>0){
+    const hoursConnected=Math.round(joinDays*24*0.7);
+    html+='<div class="fun-stat-card">🔌 Vous êtes avec nous depuis <strong>'+joinDays+' jour'+(joinDays>1?'s':'')+'</strong> — ça représente environ <strong>'+hoursConnected.toLocaleString('fr')+' heures</strong> de connexion potentielle ! ⚡</div>';
+  }
   html+='<div class="section-card"><div class="section-head">Informations</div><div class="info-row"><div class="info-key">📞 Téléphone</div><div class="info-val">'+(u.phone||'—')+'</div></div><div class="info-row"><div class="info-key">📦 Plan</div><div class="info-val">'+(u.plan||'—')+'</div></div><div class="info-row"><div class="info-key">📅 Début</div><div class="info-val">'+fmtDate(u.start_date)+'</div></div><div class="info-row"><div class="info-key">📅 Fin</div><div class="info-val">'+(u.expiry_date?fmtDate(u.expiry_date)+' à 23h59':'—')+'</div></div><div class="info-row"><div class="info-key">🗓 Membre depuis</div><div class="info-val">'+fmtDate(u.join_date)+'</div></div></div>';
   html+='<div class="section-card"><div class="section-head">🔐 Sécurité</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe</button></div>';
   html+='<button class="btn btn-danger btn-full" style="margin-top:8px" onclick="logout()">🚪 Se déconnecter</button></div>';
@@ -594,6 +610,40 @@ async function renderAdminStats(){
     html+='<div class="section-card"><div class="section-head">🔐 Sécurité</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+}
+
+// ═══ CONFETTIS DE CÉLÉBRATION ═══
+function launchConfetti(){
+  const colors=['#3b82f6','#60a5fa','#34d399','#fbbf24','#a78bfa','#f87171'];
+  const container=document.createElement('div');
+  container.className='confetti-container';
+  document.body.appendChild(container);
+  for(let i=0;i<60;i++){
+    const c=document.createElement('div');
+    c.className='confetti-piece';
+    c.style.left=Math.random()*100+'%';
+    c.style.background=colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDelay=(Math.random()*0.4)+'s';
+    c.style.animationDuration=(2+Math.random()*1.5)+'s';
+    c.style.width=c.style.height=(6+Math.random()*6)+'px';
+    c.style.borderRadius=Math.random()>0.5?'50%':'2px';
+    container.appendChild(c);
+  }
+  setTimeout(()=>container.remove(),3500);
+}
+
+// ═══ EASTER EGG — 5 clics rapides sur l'avatar profil ═══
+let eggClicks=0,eggTimer=null;
+function easterEgg(el){
+  eggClicks++;
+  clearTimeout(eggTimer);
+  eggTimer=setTimeout(()=>{eggClicks=0;},800);
+  if(eggClicks>=5){
+    eggClicks=0;
+    const msgs=['🛰️ Vous avez trouvé le secret NTY Starnet !','⭐ Easter egg débloqué ! Merci d\'être un client fidèle.','🚀 Vous êtes officiellement un explorateur NTY !'];
+    toast(msgs[Math.floor(Math.random()*msgs.length)]);
+    launchConfetti();
+  }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{

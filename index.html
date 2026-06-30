@@ -370,6 +370,26 @@ textarea.inp{resize:vertical;min-height:80px}select.inp{cursor:pointer}
 .data-orb-detail{font-size:12px;color:var(--text2);margin-top:14px;line-height:1.6;position:relative;z-index:1}
 .data-orb-cta{display:inline-block;margin-top:6px;font-weight:600;color:#fca5a5}
 
+
+/* ═══ CONFETTIS ═══ */
+.confetti-container{position:fixed;inset:0;pointer-events:none;z-index:500;overflow:hidden}
+.confetti-piece{position:absolute;top:-20px;opacity:0.9;animation:confettiFall linear forwards}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:0.9}100%{transform:translateY(110vh) rotate(540deg);opacity:0}}
+
+/* ═══ BADGES DE FIDÉLITÉ ═══ */
+.loyalty-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:6px;cursor:pointer;transition:transform .15s}
+.loyalty-badge:active{transform:scale(0.95)}
+.loyalty-new{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25)}
+.loyalty-fidele{background:rgba(96,165,250,0.12);color:#60a5fa;border:1px solid rgba(96,165,250,0.25)}
+.loyalty-vip{background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(139,92,246,0.1));color:#a78bfa;border:1px solid rgba(167,139,250,0.3)}
+.loyalty-legend{background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.1));color:#fbbf24;border:1px solid rgba(251,191,36,0.35);text-shadow:0 0 12px rgba(251,191,36,0.3)}
+
+/* ═══ FUN STAT CARD ═══ */
+.fun-stat-card{background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(99,102,241,0.04));border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--text2);line-height:1.6;text-align:center}
+.fun-stat-card strong{color:var(--accent2)}
+
+.profile-hero{cursor:pointer;-webkit-tap-highlight-color:transparent}
+
 </style>
 </head>
 <body>
