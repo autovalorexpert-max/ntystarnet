@@ -143,6 +143,19 @@ async function renderClientHome(){
       html+='<div class="ticket-card"><div class="ticket-label">🎫 VOTRE TICKET MIKROTIK ACTIF</div><div class="ticket-code">'+u.current_ticket+'</div><div class="ticket-valid">Valable du '+startFmt+' au '+endFmt+' à 23h59</div></div>';
     }
 
+    // ═══ CONSOMMATION DATA — design premium (uniquement 100 Go / 200 Go) ═══
+    const isLimitedPlan=u.plan==='100 Go'||u.plan==='200 Go';
+    if(isLimitedPlan&&u.consumption_pct&&parseInt(u.consumption_pct)>0&&u.status==='active'){
+      const cp=parseInt(u.consumption_pct);
+      const remaining=100-cp;
+      let theme,icon,headline;
+      if(cp>=90){theme='critical';icon='🔴';headline='Quota presque épuisé !';}
+      else if(cp>=70){theme='warning';icon='🟠';headline='Quota en surveillance';}
+      else if(cp>=50){theme='mid';icon='🟡';headline='Mi-parcours atteint';}
+      else{theme='good';icon='🟢';headline='Tout va bien';}
+      html+='<div class="data-orb-card data-orb-'+theme+'"><div class="data-orb-glow"></div><div class="data-orb-top"><div><div class="data-orb-eyebrow">'+icon+' Suivi de consommation</div><div class="data-orb-headline">'+headline+'</div></div><div class="data-orb-ring-wrap"><svg class="data-orb-ring" viewBox="0 0 100 100"><circle class="data-orb-track" cx="50" cy="50" r="42"/><circle class="data-orb-progress data-orb-progress-'+theme+'" cx="50" cy="50" r="42" style="stroke-dasharray:'+(2*Math.PI*42)+';stroke-dashoffset:'+(2*Math.PI*42*(1-cp/100))+'"/></svg><div class="data-orb-pct">'+cp+'<span>%</span></div></div></div><div class="data-orb-detail">Forfait <strong>'+(u.plan||'')+'</strong> · <strong>'+remaining+'%</strong> restant ce cycle'+(cp>=90?'<br><span class="data-orb-cta">⚡ Renouvelez maintenant pour ne pas perdre votre connexion</span>':'')+'</div></div>';
+    }
+
     // ═══ STATS ═══
     html+='<div class="stats-row"><div class="stat-pill"><div class="stat-pill-num">'+pays.filter(p=>p.status==='validated').length+'</div><div class="stat-pill-lbl">Paiements validés</div></div><div class="stat-pill"><div class="stat-pill-num">'+freeT.length+'</div><div class="stat-pill-lbl">Tickets restants</div></div><div class="stat-pill"><div class="stat-pill-num">'+tix.length+'</div><div class="stat-pill-lbl">Total tickets</div></div></div>';
 
@@ -466,7 +479,10 @@ async function openDetail(id){
     html+='<div id="dt-info">';
     html+=[['Statut','<span class="badge badge-'+(cl.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'}[cl.status||'pending'])+'</span>'],['Plan',cl.plan||'—'],['Prix',(cl.plan_price||'—')+' Ar/mois'],['Début',fmtDate(cl.start_date)],['Fin',(cl.expiry_date?fmtDate(cl.expiry_date)+' à 23h59':'—')],['Jours restants',dl!==null&&dl>=0?dl+' jours':'—'],['Tickets dispo',freeT.length+' / '+tickets.length],['Téléphone',cl.phone||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
     html+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'active\')">✓ Activer</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'expired\')">✗ Expirer</button></div>';
-    html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')">🗑 Supprimer ce client</button></div>';
+    if(cl.plan==='100 Go'||cl.plan==='200 Go'){
+      html+='<div class="divider"></div><div class="inp-label">📊 Consommation de données ('+cl.plan+')</div><div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn '+(cl.consumption_pct=='25'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',25)">25%</button><button class="btn '+(cl.consumption_pct=='50'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',50)">50%</button><button class="btn '+(cl.consumption_pct=='75'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',75)">75%</button><button class="btn '+(cl.consumption_pct=='90'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',90)">90%</button></div><button class="btn btn-ghost btn-full" style="margin-bottom:8px" onclick="setConsumption(\''+id+'\',0)">↺ Réinitialiser (nouveau cycle)</button>';
+    }
+    html+='<button class="btn" style="margin-top:4px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')">🗑 Supprimer ce client</button></div>';
     html+='<div id="dt-tickets" style="display:none"><label class="inp-label">Ajouter des tickets (un par ligne)</label><textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><button class="btn btn-success btn-full" onclick="addMoreTickets(\''+id+'\')">+ Ajouter</button><div style="margin-top:12px">';
     if(!tickets.length)html+='<div class="empty"><div class="empty-icon">🎫</div><p>Aucun ticket</p></div>';
     else tickets.forEach((t,i)=>{html+='<div class="ticket-row '+(t.is_used?'ticket-used':'')+'"><span class="ticket-row-code">'+(i+1)+'. '+t.code+(t.is_current?' 👈':'')+'</span><span class="tag '+(t.is_current?'tag-cur':t.is_used?'tag-used':'tag-free')+'">'+(t.is_current?'Actuel':t.is_used?'Utilisé':'Dispo')+'</span></div>';});
@@ -478,6 +494,17 @@ async function openDetail(id){
 
 function dtab(tab,btn){document.querySelectorAll('#modal-content .dtab').forEach(t=>t.classList.remove('active'));if(btn)btn.classList.add('active');['info','tickets','edit'].forEach(t=>{const el=document.getElementById('dt-'+t);if(el)el.style.display=t===tab?'block':'none';});}
 async function quickStatus(id,status){try{await sbPatch('clients','id=eq.'+id,{status});closeModal();toast('Statut mis à jour !');renderAdminClients();}catch(e){toast('Erreur','error');}}
+
+async function setConsumption(id,pct){
+  try{
+    await sbPatch('clients','id=eq.'+id,{consumption_pct:pct.toString()});
+    if(pct>0){
+      await sbPost('messages',{client_id:id,sender:'admin',sender_name:'Admin',content:'📊 Mise à jour de votre consommation : vous avez utilisé '+pct+'% de votre forfait.'+(pct>=90?'\n\n⚠️ Pensez à renouveler votre abonnement bientôt pour éviter toute interruption.':'')});
+    }
+    toast(pct>0?'✅ Consommation mise à jour : '+pct+'%':'✅ Consommation réinitialisée');
+    openDetail(id);
+  }catch(e){toast('Erreur','error');}
+}
 async function deleteClient(id,name){if(!confirm('Supprimer "'+name+'" ? Irréversible.'))return;try{await sbDelete('clients','id=eq.'+id);closeModal();toast('Client supprimé');renderAdminClients();}catch(e){toast('Erreur','error');}}
 async function addMoreTickets(clientId){const raw=document.getElementById('new-tickets-inp')?.value.trim();if(!raw){toast('Entrez un ticket','error');return;}const codes=raw.split('\n').map(t=>t.trim()).filter(t=>t);try{for(const code of codes){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}toast('✅ '+codes.length+' ticket(s) ajouté(s) !');openDetail(clientId);}catch(e){toast('Erreur','error');}}
 
