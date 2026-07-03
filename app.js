@@ -107,9 +107,14 @@ async function renderClientHome(){
     let html='<div class="fade-up">';
     html+='<div class="greeting"><div class="greeting-text">'+greet+'</div><div class="greeting-name">'+u.name+'</div></div>';
 
-    // ═══ COUPURE ÉLECTRIQUE (si active) ═══
-    if(coupureActive){
-      html+='<div class="notif-card notif-danger" style="border-width:2px"><div class="notif-icon">🔴</div><div class="notif-body"><div class="notif-title">Coupure en cours !</div><div class="notif-msg">'+coupureMsg+'</div></div></div>';
+    // ═══ COUPURE ÉLECTRIQUE CIBLÉE PAR ZONE ═══
+    const clientZone=u.zone||'';
+    const coupureZones=JSON.parse(localStorage.getItem('nty_coupure_zones')||'{}');
+    const zoneHasCoupure=clientZone&&coupureZones[clientZone]===true;
+    if(zoneHasCoupure){
+      const zoneKey='nty_coupure_msg_'+clientZone;
+      const zoneMsg=localStorage.getItem(zoneKey)||'⚡ Coupure électrique en cours dans votre zone ('+clientZone+') — La connexion WiFi sera rétablie dès le retour du courant.';
+      html+='<div class="notif-card notif-danger" style="border-width:2px"><div class="notif-icon">🔴</div><div class="notif-body"><div class="notif-title">Coupure en cours — '+clientZone+'</div><div class="notif-msg">'+zoneMsg+'</div></div></div>';
     }
 
     // ═══ ABONNEMENT NON PAYÉ ═══
@@ -135,6 +140,11 @@ async function renderClientHome(){
     // ═══ DATES D\'ABONNEMENT ═══
     if(u.start_date&&u.expiry_date&&u.status==='active'){
       html+='<div class="notif-card notif-info"><div class="notif-icon">📅</div><div class="notif-body"><div class="notif-title">Période d\'abonnement</div><div class="notif-msg">Du <strong>'+startFmt+'</strong> au <strong>'+endFmt+' à 23h59</strong>.</div></div></div>';
+    }
+
+    // ═══ AVERTISSEMENT COUPURE AUTOMATIQUE ═══
+    if(u.status==='active'&&dl!==null&&dl>5){
+      html+='<div class="notif-card notif-subtle"><div class="notif-icon">ℹ️</div><div class="notif-body"><div class="notif-title">Information importante</div><div class="notif-msg">En cas de non-renouvellement, votre connexion WiFi sera <strong>automatiquement suspendue</strong> à l\'expiration de votre abonnement le <strong>'+endFmt+' à 23h59</strong>. Pensez à renouveler à temps !</div></div></div>';
     }
 
     // ═══ HERO CARD ═══
@@ -233,14 +243,131 @@ async function renderClientMessages(){
   try{
     const msgs=await sbGet('messages','client_id=eq.'+me.id+'&order=created_at.asc');
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">💬 Messages</div><div class="page-sub">Support NTY Starnet</div></div>';
-    html+='<div class="chat-card"><div class="chat-header"><div class="chat-avatar">🛜</div><div><div class="chat-name">NTY Starnet Support</div><div class="chat-status">● En ligne</div></div></div>';
+
+    // ═══ TABS : Bot / Admin ═══
+    html+='<div class="chat-tabs"><button class="chat-tab active" id="tab-bot" onclick="switchChatTab(\'bot\')">🤖 Assistant</button><button class="chat-tab" id="tab-admin" onclick="switchChatTab(\'admin\')">👨‍💼 Admin</button></div>';
+
+    // ═══ BOT CHAT ═══
+    html+='<div id="chat-bot-panel"><div class="chat-card"><div class="chat-header"><div class="chat-avatar">🤖</div><div><div class="chat-name">Assistant NTY Starnet</div><div class="chat-status" style="color:var(--accent2)">● Disponible 24h/24</div></div></div>';
+    html+='<div class="msg-list" id="bot-msg-list">';
+    const botMsgs=JSON.parse(localStorage.getItem('nty_bot_msgs_'+me.id)||'[]');
+    if(!botMsgs.length){
+      html+='<div class="msg-wrap msg-recv"><div class="bubble bubble-recv">'+formatBotMsg(botReply('bonjour'))+'</div></div>';
+    } else {
+      botMsgs.forEach(m=>{
+        if(m.type==='image'){
+          html+='<div class="msg-wrap msg-sent"><img src="'+m.url+'" class="chat-img-preview"><div class="msg-time">'+m.time+'</div></div>';
+        } else {
+          html+='<div class="msg-wrap msg-'+(m.from==='user'?'sent':'recv')+'"><div class="bubble bubble-'+(m.from==='user'?'sent':'recv')+'">'+formatBotMsg(m.text)+'</div><div class="msg-time">'+m.time+'</div></div>';
+        }
+      });
+    }
+    html+='</div>';
+    html+='<div class="chat-inp-wrap">';
+    html+='<div class="chat-inp">';
+    html+='<button class="chat-photo-btn" onclick="document.getElementById(\'bot-photo-inp\').click()" title="Envoyer une photo">📷</button>';
+    html+='<input type="file" id="bot-photo-inp" accept="image/*" style="display:none" onchange="sendBotPhoto()">';
+    html+='<input class="chat-inp-field" type="text" id="bot-msg-inp" placeholder="Ex: comment se connecter ?" onkeydown="if(event.key===\'Enter\')sendBotMsg()">';
+    html+='<button class="chat-send-btn" onclick="sendBotMsg()">→</button>';
+    html+='</div></div></div></div>';
+
+    // ═══ ADMIN CHAT ═══
+    html+='<div id="chat-admin-panel" style="display:none"><div class="chat-card"><div class="chat-header"><div class="chat-avatar">🛜</div><div><div class="chat-name">NTY Starnet Admin</div><div class="chat-status">● En ligne</div></div></div>';
     html+='<div class="msg-list" id="c-msg-list">';
-    if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Commencez la conversation !</p></div>';
-    else msgs.forEach(m=>{const mine=m.sender==='client';html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'"><div class="bubble bubble-'+(mine?'sent':'recv')+'">'+m.content+'</div><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';});
-    html+='</div><div class="chat-inp"><input class="chat-inp-field" type="text" id="c-msg-inp" placeholder="Écrire un message..." onkeydown="if(event.key===\'Enter\')cSendMsg()"><button class="chat-send-btn" onclick="cSendMsg()">→</button></div></div></div>';
+    if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Posez votre question à l'administrateur !</p></div>';
+    else msgs.forEach(m=>{
+      const mine=m.sender==='client';
+      if(m.content&&m.content.startsWith('[IMG]')){
+        const imgUrl=m.content.replace('[IMG]','');
+        html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'"><img src="'+imgUrl+'" class="chat-img-preview"><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';
+      } else {
+        html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'"><div class="bubble bubble-'+(mine?'sent':'recv')+'">'+m.content.replace(/\n/g,'<br>')+'</div><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';
+      }
+    });
+    html+='</div>';
+    html+='<div class="chat-inp-wrap">';
+    html+='<div class="chat-inp">';
+    html+='<button class="chat-photo-btn" onclick="document.getElementById(\'admin-photo-inp\').click()" title="Envoyer une photo">📷</button>';
+    html+='<input type="file" id="admin-photo-inp" accept="image/*" style="display:none" onchange="sendAdminPhoto()">';
+    html+='<input class="chat-inp-field" type="text" id="c-msg-inp" placeholder="Message ou envoyez une photo..." onkeydown="if(event.key===\'Enter\')cSendMsg()">';
+    html+='<button class="chat-send-btn" onclick="cSendMsg()">→</button>';
+    html+='</div></div></div></div>';
+
+    html+='</div>';
     c.innerHTML=html;
-    const el=document.getElementById('c-msg-list');if(el)el.scrollTop=el.scrollHeight;
+    const el=document.getElementById('bot-msg-list');if(el)el.scrollTop=el.scrollHeight;
+    const el2=document.getElementById('c-msg-list');if(el2)el2.scrollTop=el2.scrollHeight;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+}
+
+function switchChatTab(tab){
+  document.getElementById('tab-bot').classList.toggle('active',tab==='bot');
+  document.getElementById('tab-admin').classList.toggle('active',tab==='admin');
+  document.getElementById('chat-bot-panel').style.display=tab==='bot'?'block':'none';
+  document.getElementById('chat-admin-panel').style.display=tab==='admin'?'block':'none';
+}
+
+function sendBotMsg(){
+  const inp=document.getElementById('bot-msg-inp');
+  if(!inp||!inp.value.trim())return;
+  const userText=inp.value.trim();inp.value='';
+  const botMsgs=JSON.parse(localStorage.getItem('nty_bot_msgs_'+me.id)||'[]');
+  botMsgs.push({from:'user',text:userText,time:now()});
+  const reply=botReply(userText);
+  botMsgs.push({from:'bot',text:reply,time:now()});
+  if(botMsgs.length>50)botMsgs.splice(0,botMsgs.length-50);
+  localStorage.setItem('nty_bot_msgs_'+me.id,JSON.stringify(botMsgs));
+  renderClientMessages();
+  setTimeout(()=>{switchChatTab('bot');const el=document.getElementById('bot-msg-list');if(el)el.scrollTop=el.scrollHeight;},100);
+}
+
+function sendBotPhoto(){
+  const f=document.getElementById('bot-photo-inp').files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const url=e.target.result;
+    const botMsgs=JSON.parse(localStorage.getItem('nty_bot_msgs_'+me.id)||'[]');
+    botMsgs.push({from:'user',type:'image',url:url,time:now()});
+    // Bot répond avec analyse guidée
+    const botResp=`📸 **J'ai bien reçu votre capture d'écran !**
+
+Pour vous aider au mieux, dites-moi :
+• Quel appareil utilisez-vous ? (téléphone, PC, capteur...)
+• Quelle marque ? (TP-Link, Comfast, Tenda, Android, iPhone...)
+• Quel message d'erreur voyez-vous exactement ?
+
+En attendant, voici les vérifications rapides :
+
+1. **Page blanche ?** → Tapez \`192.168.0.1\` dans votre navigateur
+2. **Erreur "site inaccessible" ?** → Vérifiez que vous êtes connecté au WiFi NTY Starnet
+3. **Page de login qui n\'accepte pas ?** → Vérifiez votre ticket dans l\'onglet Accueil
+
+💡 Si votre problème persiste, envoyez aussi cette capture à l\'administrateur via l\'onglet **👨‍💼 Admin** pour une aide personnalisée !`;
+    botMsgs.push({from:'bot',text:botResp,time:now()});
+    if(botMsgs.length>50)botMsgs.splice(0,botMsgs.length-50);
+    localStorage.setItem('nty_bot_msgs_'+me.id,JSON.stringify(botMsgs));
+    renderClientMessages();
+    setTimeout(()=>{switchChatTab('bot');const el=document.getElementById('bot-msg-list');if(el)el.scrollTop=el.scrollHeight;},100);
+  };
+  r.readAsDataURL(f);
+}
+
+async function sendAdminPhoto(){
+  const f=document.getElementById('admin-photo-inp').files[0];
+  if(!f)return;
+  if(f.size>5*1024*1024){toast('Image trop grande (max 5MB)','error');return;}
+  const r=new FileReader();
+  r.onload=async e=>{
+    const url=e.target.result;
+    try{
+      await sbPost('messages',{client_id:me.id,sender:'client',sender_name:me.name,content:'[IMG]'+url});
+      toast('📷 Photo envoyée à l\'administrateur !');
+      renderClientMessages();
+      setTimeout(()=>switchChatTab('admin'),100);
+    }catch(err){toast('Erreur envoi photo','error');}
+  };
+  r.readAsDataURL(f);
 }
 
 async function cSendMsg(){
@@ -315,17 +442,27 @@ async function renderAdminDashboard(){
 
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">📊 Dashboard</div><div class="page-sub">Vue d\'ensemble NTY Starnet</div></div>';
 
-    // ═══ BOUTON COUPURE ÉLECTRIQUE ═══
-    html+='<div class="coupure-panel '+(coupureActive?'coupure-on':'coupure-off')+'">';
-    html+='<div class="coupure-info"><div class="coupure-icon">'+(coupureActive?'🔴':'🟢')+'</div><div><div class="coupure-title">'+(coupureActive?'Coupure électrique ACTIVE':'Connexion normale')+'</div><div class="coupure-sub">'+(coupureActive?'Les clients voient une alerte rouge':'Aucune alerte envoyée aux clients')+'</div></div></div>';
-    html+='<div style="display:flex;gap:8px;margin-top:12px">';
-    if(coupureActive){
-      html+='<button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="toggleCoupure(false)">🟢 Rétablir la connexion</button>';
-    } else {
-      html+='<button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="toggleCoupure(true)">🔴 Signaler coupure</button>';
-    }
-    html+='<button class="btn btn-ghost" style="width:auto;padding:10px 14px;margin:0;font-size:13px" onclick="showCoupureEdit()">✏️ Modifier message</button>';
-    html+='</div></div>';
+    // ═══ BOUTON COUPURE ÉLECTRIQUE PAR ZONE ═══
+    let zones=[];
+    try{zones=await sbGet('zones','order=name.asc');}catch(e){}
+    const coupureZones=JSON.parse(localStorage.getItem('nty_coupure_zones')||'{}');
+    html+='<div class="coupure-panel-wrap"><div class="coupure-panel-title">⚡ Gestion des coupures électriques</div>';
+    html+='<div class="zone-grid">';
+    zones.forEach(z=>{
+      const isOn=coupureZones[z.name]===true;
+      html+='<div class="zone-coupure-card '+(isOn?'zone-on':'zone-off')+'"><div class="zone-card-top"><div class="zone-icon">'+(isOn?'🔴':'🟢')+'</div><div><div class="zone-name">'+z.name+'</div><div class="zone-status">'+(isOn?'Coupure active':'Normal')+'</div></div></div>';
+      html+='<div style="display:flex;gap:6px;margin-top:10px">';
+      if(isOn){
+        html+='<button class="btn btn-success" style="flex:1;padding:8px;margin:0;font-size:12px" onclick="toggleZoneCoupure(\''+z.name+'\',false)">🟢 Rétablir</button>';
+      } else {
+        html+='<button class="btn btn-danger" style="flex:1;padding:8px;margin:0;font-size:12px" onclick="toggleZoneCoupure(\''+z.name+'\',true)">🔴 Coupure</button>';
+      }
+      html+='<button class="btn btn-ghost" style="width:auto;padding:8px 10px;margin:0;font-size:12px" onclick="showCoupureEdit(\''+z.name+'\')">✏️</button>';
+      html+='</div></div>';
+    });
+    html+='</div>';
+    html+='<button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="showZoneManager()">⚙️ Gérer les zones</button>';
+    html+='</div>';
 
     // ═══ REVENUE ═══
     html+='<div class="revenue-hero"><div class="revenue-label">💰 REVENUS TOTAUX VALIDÉS</div><div class="revenue-amount">'+revenue.toLocaleString('fr')+' <span>Ar</span></div><div class="revenue-sub">'+payments.filter(p=>p.status==='validated').length+' paiements · '+clients.filter(x=>x.status==='active').length+' clients actifs</div></div>';
@@ -355,15 +492,28 @@ async function renderAdminDashboard(){
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'dashboard\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Réessayer</button></p></div>';}
 }
 
-function toggleCoupure(active){
-  coupureActive=active;
-  localStorage.setItem('nty_coupure',active.toString());
-  toast(active?'🔴 Alerte coupure activée — Les clients voient l\'alerte !':'🟢 Connexion rétablie — Alerte supprimée pour les clients !',active?'error':'success');
+function toggleZoneCoupure(zoneName,active){
+  const zones=JSON.parse(localStorage.getItem('nty_coupure_zones')||'{}');
+  zones[zoneName]=active;
+  localStorage.setItem('nty_coupure_zones',JSON.stringify(zones));
+  // Mettre à jour coupureActive global (true si au moins une zone a une coupure)
+  coupureActive=Object.values(zones).some(v=>v===true);
+  localStorage.setItem('nty_coupure',coupureActive.toString());
+  toast(active?'🔴 Coupure activée pour '+zoneName+'!':'🟢 Connexion rétablie pour '+zoneName+'!',active?'error':'success');
   aPage('dashboard',null);
 }
 
-function showCoupureEdit(){
-  showModal('<div class="modal-title">✏️ Message de coupure <button class="modal-close" onclick="closeModal()">×</button></div><p style="font-size:13px;color:var(--text2);margin-bottom:14px">Ce message s\'affichera en rouge sur le dashboard des clients quand vous activez l\'alerte coupure.</p><label class="inp-label">Choisir un message prédéfini</label><div class="preset-list"><div class="preset-item" onclick="setPreset(this,\'⚡ Coupure électrique en cours — La connexion WiFi est temporairement indisponible. Nous travaillons à rétablir le service.\')">⚡ Coupure électrique générale</div><div class="preset-item" onclick="setPreset(this,\'🔧 Maintenance en cours — Votre connexion WiFi sera rétablie dans quelques heures. Merci pour votre patience.\')">🔧 Maintenance technique</div><div class="preset-item" onclick="setPreset(this,\'🌩️ Panne due aux conditions météorologiques — La connexion sera rétablie dès que possible.\')">🌩️ Panne météo</div><div class="preset-item" onclick="setPreset(this,\'⚡ Coupure électrique dans votre zone — La connexion WiFi reprendra automatiquement dès le retour du courant.\')">⚡ Coupure zone spécifique</div></div><label class="inp-label" style="margin-top:14px">Ou écrire un message personnalisé</label><textarea class="inp" id="coupure-msg-inp" rows="3">'+coupureMsg+'</textarea><button class="btn btn-primary btn-full" onclick="saveCoupureMsg()">💾 Enregistrer le message</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+function toggleCoupure(active){
+  coupureActive=active;
+  localStorage.setItem('nty_coupure',active.toString());
+  toast(active?'🔴 Alerte coupure activée !':'🟢 Connexion rétablie !',active?'error':'success');
+  aPage('dashboard',null);
+}
+
+function showCoupureEdit(zoneName){
+  const zoneKey='nty_coupure_msg_'+(zoneName||'default');
+  const currentMsg=localStorage.getItem(zoneKey)||'⚡ Coupure électrique en cours dans votre zone — La connexion WiFi sera rétablie dès le retour du courant.';
+  showModal('<div class="modal-title">✏️ Message pour '+(zoneName||'tous')+' <button class="modal-close" onclick="closeModal()">×</button></div><p style="font-size:13px;color:var(--text2);margin-bottom:14px">Ce message s\'affichera uniquement aux clients de la zone <strong>'+(zoneName||'tous')+'</strong>.</p><label class="inp-label">Choisir un message prédéfini</label><div class="preset-list"><div class="preset-item" onclick="setPreset(this,\'⚡ Coupure électrique en cours — La connexion WiFi est temporairement indisponible. Nous travaillons à rétablir le service.\')">⚡ Coupure électrique générale</div><div class="preset-item" onclick="setPreset(this,\'🔧 Maintenance en cours — Votre connexion WiFi sera rétablie dans quelques heures. Merci pour votre patience.\')">🔧 Maintenance technique</div><div class="preset-item" onclick="setPreset(this,\'🌩️ Panne due aux conditions météorologiques — La connexion sera rétablie dès que possible.\')">🌩️ Panne météo</div><div class="preset-item" onclick="setPreset(this,\'⚡ Coupure électrique dans votre zone — La connexion WiFi reprendra automatiquement dès le retour du courant.\')">⚡ Coupure zone spécifique</div></div><label class="inp-label" style="margin-top:14px">Ou écrire un message personnalisé</label><textarea class="inp" id="coupure-msg-inp" rows="3">'+currentMsg+'</textarea><button class="btn btn-primary btn-full" onclick="saveCoupureMsg(\''+zoneKey+'\')">💾 Enregistrer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
 }
 
 function setPreset(el,msg){
@@ -372,11 +522,11 @@ function setPreset(el,msg){
   document.getElementById('coupure-msg-inp').value=msg;
 }
 
-function saveCoupureMsg(){
+function saveCoupureMsg(zoneKey){
   const msg=document.getElementById('coupure-msg-inp').value.trim();
   if(!msg){toast('Entrez un message','error');return;}
-  coupureMsg=msg;
-  localStorage.setItem('nty_coupure_msg',msg);
+  localStorage.setItem(zoneKey||'nty_coupure_msg',msg);
+  if(!zoneKey)coupureMsg=msg;
   closeModal();toast('✅ Message enregistré !');
 }
 
@@ -398,7 +548,7 @@ async function renderAdminClients(search=''){
       for(const cl of clients){
         const tixCount=ticketCountByClient[cl.id]||0;
         const dl=daysLeft(cl.expiry_date);
-        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">@'+cl.username+' · '+tixCount+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
+        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">📍 '+(cl.zone||'—')+' · @'+cl.username+' · '+tixCount+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expiré',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
       }
       html+='</div>';
     }
@@ -493,7 +643,7 @@ async function openDetail(id){
     let html='<div class="modal-title"><div style="display:flex;align-items:center;gap:10px"><div class="modal-avatar">'+initials(cl.name)+'</div><div><div>'+cl.name+'</div><div style="font-size:11px;color:var(--text3)">@'+cl.username+'</div></div></div><button class="modal-close" onclick="closeModal()">×</button></div>';
     html+='<div class="dtabs"><button class="dtab active" onclick="dtab(\'info\',this)">Infos</button><button class="dtab" onclick="dtab(\'tickets\',this)">Tickets ('+freeT.length+')</button><button class="dtab" onclick="dtab(\'edit\',this)">Modifier</button></div>';
     html+='<div id="dt-info">';
-    html+=[['Statut','<span class="badge badge-'+(cl.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'}[cl.status||'pending'])+'</span>'],['Plan',cl.plan||'—'],['Prix',(cl.plan_price||'—')+' Ar/mois'],['Début',fmtDate(cl.start_date)],['Fin',(cl.expiry_date?fmtDate(cl.expiry_date)+' à 23h59':'—')],['Jours restants',dl!==null&&dl>=0?dl+' jours':'—'],['Tickets dispo',freeT.length+' / '+tickets.length],['Téléphone',cl.phone||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
+    html+=[['Statut','<span class="badge badge-'+(cl.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expiré',pending:'⏳ En attente'}[cl.status||'pending'])+'</span>'],['Zone','📍 '+(cl.zone||'—')],['Plan',cl.plan||'—'],['Prix',(cl.plan_price||'—')+' Ar/mois'],['Début',fmtDate(cl.start_date)],['Fin',(cl.expiry_date?fmtDate(cl.expiry_date)+' à 23h59':'—')],['Jours restants',dl!==null&&dl>=0?dl+' jours':'—'],['Tickets dispo',freeT.length+' / '+tickets.length],['Téléphone',cl.phone||'—']].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
     html+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'active\')">✓ Activer</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'expired\')">✗ Expirer</button></div>';
     if(cl.plan==='100 Go'||cl.plan==='200 Go'){
       html+='<div class="divider"></div><div class="inp-label">📊 Consommation de données ('+cl.plan+')</div><div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn '+(cl.consumption_pct=='25'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',25)">25%</button><button class="btn '+(cl.consumption_pct=='50'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',50)">50%</button><button class="btn '+(cl.consumption_pct=='75'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',75)">75%</button><button class="btn '+(cl.consumption_pct=='90'?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\',90)">90%</button></div><button class="btn btn-ghost btn-full" style="margin-bottom:8px" onclick="setConsumption(\''+id+'\',0)">↺ Réinitialiser (nouveau cycle)</button>';
@@ -503,7 +653,8 @@ async function openDetail(id){
     if(!tickets.length)html+='<div class="empty"><div class="empty-icon">🎫</div><p>Aucun ticket</p></div>';
     else tickets.forEach((t,i)=>{html+='<div class="ticket-row '+(t.is_used?'ticket-used':'')+'"><span class="ticket-row-code">'+(i+1)+'. '+t.code+(t.is_current?' 👈':'')+'</span><span class="tag '+(t.is_current?'tag-cur':t.is_used?'tag-used':'tag-free')+'">'+(t.is_current?'Actuel':t.is_used?'Utilisé':'Dispo')+'</span></div>';});
     html+='</div></div>';
-    html+='<div id="dt-edit" style="display:none"><label class="inp-label">Nom complet</label><input class="inp" type="text" id="edit-name" value="'+cl.name+'"><label class="inp-label">Username</label><input class="inp" type="text" id="edit-user" value="'+cl.username+'"><label class="inp-label">Nouveau mot de passe (vide = inchangé)</label><input class="inp" type="password" id="edit-pass" placeholder="Nouveau mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'"><label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimité 5 appareils','Illimité 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select><button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
+    let editZones=[];try{editZones=await sbGet('zones','order=name.asc');}catch(e){}
+    html+='<div id="dt-edit" style="display:none"><label class="inp-label">Nom complet</label><input class="inp" type="text" id="edit-name" value="'+cl.name+'"><label class="inp-label">Username</label><input class="inp" type="text" id="edit-user" value="'+cl.username+'"><label class="inp-label">Nouveau mot de passe (vide = inchangé)</label><input class="inp" type="password" id="edit-pass" placeholder="Nouveau mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'"><label class="inp-label">📍 Zone</label><select class="inp" id="edit-zone">'+editZones.map(z=>'<option '+(cl.zone===z.name?'selected':'')+'>'+z.name+'</option>').join('')+'</select><label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimité 5 appareils','Illimité 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select><button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
     showModal(html);
   }catch(e){toast('Erreur','error');}
 }
@@ -526,26 +677,30 @@ async function addMoreTickets(clientId){const raw=document.getElementById('new-t
 
 async function saveClientEdit(id){
   const name=document.getElementById('edit-name').value.trim();const user=document.getElementById('edit-user').value.trim().toLowerCase();const pass=document.getElementById('edit-pass').value;const phone=document.getElementById('edit-phone').value.trim();const plan=document.getElementById('edit-plan').value;
+  const zone=document.getElementById('edit-zone')?.value||'';
   const prices={'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'};
   if(!name||!user){toast('Nom et username requis','error');return;}
-  const updates={name,username:user,phone,plan,plan_price:prices[plan]};
+  const updates={name,username:user,phone,zone,plan,plan_price:prices[plan]};
   if(pass){if(pass.length<4){toast('Mot de passe trop court','error');return;}updates.password=pass;}
   try{await sbPatch('clients','id=eq.'+id,updates);closeModal();toast('✅ Client modifié !'+(pass?' MDP: '+pass:''));renderAdminClients();}
   catch(e){toast('Erreur. Username peut-être déjà utilisé.','error');}
 }
 
-function showAddClient(){
-  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass" placeholder="Choisir un mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimité 5 appareils</option><option>Illimité 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><p style="font-size:11px;color:var(--text3);margin-bottom:12px">💡 Envoyés un par un à chaque paiement validé.</p><button class="btn btn-primary btn-full" onclick="addClient()">✓ Créer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+async function showAddClient(){
+  let zones=[];
+  try{zones=await sbGet('zones','order=name.asc');}catch(e){}
+  const zoneOptions=zones.map(z=>'<option>'+z.name+'</option>').join('');
+  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass" placeholder="Choisir un mot de passe"><label class="inp-label">Téléphone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">📍 Zone *</label><select class="inp" id="n-zone">'+zoneOptions+'</select><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimité 5 appareils</option><option>Illimité 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ&#10;DEF456-UVW&#10;..."></textarea><p style="font-size:11px;color:var(--text3);margin-bottom:12px">💡 Envoyés un par un à chaque paiement validé.</p><button class="btn btn-primary btn-full" onclick="addClient()">✓ Créer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
 }
 
 async function addClient(){
-  const name=document.getElementById('n-name').value.trim();const user=document.getElementById('n-user').value.trim().toLowerCase();const pass=document.getElementById('n-pass').value;const phone=document.getElementById('n-phone').value.trim();const plan=document.getElementById('n-plan').value;const raw=document.getElementById('n-tickets').value.trim();
+  const name=document.getElementById('n-name').value.trim();const user=document.getElementById('n-user').value.trim().toLowerCase();const pass=document.getElementById('n-pass').value;const phone=document.getElementById('n-phone').value.trim();const zone=document.getElementById('n-zone').value;const plan=document.getElementById('n-plan').value;const raw=document.getElementById('n-tickets').value.trim();
   if(!name||!user||!pass){toast('Remplissez nom, username et mot de passe.','error');return;}
   if(!raw){toast('Ajoutez au moins un ticket.','error');return;}
   const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
   const prices={'100 Go':'40.000','200 Go':'55.000','Illimité 5 appareils':'65.000','Illimité 9+ appareils':'90.000'};
   try{
-    const nc=await sbPost('clients',{username:user,password:pass,name,phone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
+    const nc=await sbPost('clients',{username:user,password:pass,name,phone,zone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
     const clientId=nc[0].id;
     for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
     closeModal();
@@ -578,7 +733,15 @@ async function openAdminChat(clientId,clientName){
     let html='<div class="modal-title"><div>💬 '+clientName+'</div><button class="modal-close" onclick="closeModal()">×</button></div>';
     html+='<div class="msg-list" id="admin-msg-list" style="max-height:300px">';
     if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Pas encore de messages</p></div>';
-    else msgs.forEach(m=>{const mine=m.sender==='admin';html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'">'+(mine?'':'<div style="font-size:10px;color:var(--text3);margin-bottom:2px">'+m.sender_name+'</div>')+'<div class="bubble bubble-'+(mine?'sent':'recv')+'">'+m.content.replace(/\n/g,'<br>')+'</div><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';});
+    else msgs.forEach(m=>{
+      const mine=m.sender==='admin';
+      if(m.content&&m.content.startsWith('[IMG]')){
+        const imgUrl=m.content.replace('[IMG]','');
+        html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'"><img src="'+imgUrl+'" class="chat-img-preview"><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';
+      } else {
+        html+='<div class="msg-wrap msg-'+(mine?'sent':'recv')+'">'+(mine?'':'<div style="font-size:10px;color:var(--text3);margin-bottom:2px">'+m.sender_name+'</div>')+'<div class="bubble bubble-'+(mine?'sent':'recv')+'">'+m.content.replace(/\n/g,'<br>')+'</div><div class="msg-time">'+new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+'</div></div>';
+      }
+    });
     html+='</div><div class="chat-inp"><input class="chat-inp-field" type="text" id="a-msg-inp" placeholder="Répondre..." onkeydown="if(event.key===\'Enter\')aSendMsg()"><button class="chat-send-btn" onclick="aSendMsg()">→</button></div>';
     showModal(html);
     setTimeout(()=>{const el=document.getElementById('admin-msg-list');if(el)el.scrollTop=el.scrollHeight;},100);
@@ -610,6 +773,43 @@ async function renderAdminStats(){
     html+='<div class="section-card"><div class="section-head">🔐 Sécurité</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+}
+
+// ═══ GESTIONNAIRE DE ZONES ═══
+async function showZoneManager(){
+  let zones=[];
+  try{zones=await sbGet('zones','order=name.asc');}catch(e){}
+  let html='<div class="modal-title">⚙️ Gérer les zones <button class="modal-close" onclick="closeModal()">×</button></div>';
+  html+='<div style="margin-bottom:14px">';
+  zones.forEach(z=>{
+    html+='<div class="info-row"><div class="info-val" style="font-weight:600">📍 '+z.name+'</div><button class="btn btn-danger btn-sm" style="padding:6px 12px;font-size:12px" onclick="deleteZone(\''+z.id+'\',\''+z.name+'\')">🗑</button></div>';
+  });
+  if(!zones.length)html+='<div class="empty"><div class="empty-icon">📍</div><p>Aucune zone</p></div>';
+  html+='</div>';
+  html+='<label class="inp-label">Ajouter une nouvelle zone</label>';
+  html+='<input class="inp" type="text" id="new-zone-name" placeholder="Ex: Ambohijanaka">';
+  html+='<button class="btn btn-primary btn-full" onclick="addZone()">+ Ajouter la zone</button>';
+  html+='<button class="btn btn-ghost btn-full" onclick="closeModal()">Fermer</button>';
+  showModal(html);
+}
+
+async function addZone(){
+  const name=document.getElementById('new-zone-name').value.trim();
+  if(!name){toast('Entrez un nom de zone','error');return;}
+  try{
+    await sbPost('zones',{name});
+    toast('✅ Zone "'+name+'" créée !');
+    showZoneManager();
+  }catch(e){toast('Erreur. Cette zone existe peut-être déjà.','error');}
+}
+
+async function deleteZone(id,name){
+  if(!confirm('Supprimer la zone "'+name+'" ? Les clients de cette zone ne seront pas supprimés.'))return;
+  try{
+    await sbDelete('zones','id=eq.'+id);
+    toast('Zone "'+name+'" supprimée');
+    showZoneManager();
+  }catch(e){toast('Erreur suppression','error');}
 }
 
 // ═══ CONFETTIS DE CÉLÉBRATION ═══
@@ -644,6 +844,359 @@ function easterEgg(el){
     toast(msgs[Math.floor(Math.random()*msgs.length)]);
     launchConfetti();
   }
+}
+
+
+// ═══════════════════════════════════════════════════════
+// BOT D'ASSISTANCE NTY STARNET
+// ═══════════════════════════════════════════════════════
+const BOT_NAME = '🤖 Assistant NTY Starnet';
+const TAKEN_IPS = ['192.168.0.57', '192.168.0.9', '192.168.0.77', '192.168.0.79', '192.168.0.86', '192.168.0.39', '192.168.0.49', '192.168.0.5', '192.168.0.226', '192.168.0.228', '192.168.0.87', '192.168.0.65', '192.168.0.71', '192.168.0.50', '192.168.0.201', '192.168.0.95', '192.168.0.254', '26.26.26.4', '192.168.0.253', '26.26.26.251', '192.168.0.88', '192.168.0.252', '192.168.0.26', '192.168.0.203', '192.168.0.90', '192.168.0.202', '192.168.0.81', '192.168.2.2', '192.168.0.112', '192.168.0.222', '192.168.0.58', '192.168.0.42', '192.168.0.204'];
+
+function getAvailableIPs(){
+  const available=[];
+  for(let i=2;i<=254;i++){
+    const ip='192.168.0.'+i;
+    if(!TAKEN_IPS.includes(ip))available.push(ip);
+  }
+  return available;
+}
+
+function botReply(userMsg){
+  const msg=userMsg.toLowerCase().trim();
+  
+  // ═══ CONNEXION / SE CONNECTER ═══
+  if(msg.includes('connect')&&!msg.includes('déconnect')||msg.includes('se connecter')||msg.includes('comment connecter')||msg.includes('connexion')){
+    return `📶 **Comment se connecter au WiFi NTY Starnet**
+
+**Étape 1** — Cherchez le réseau WiFi :
+• \`TNTY_5GHZ/0344127501\`
+• ou \`CNTY_5GHZ/0344127501\`
+• (Les relais ont un suffixe : Kl, has, FANO...)
+
+**Étape 2** — Mot de passe WiFi : \`42024...\`
+
+**Étape 3** — Ouvrez votre navigateur (Chrome, Firefox...) → une page de connexion Mikrotik s'affiche automatiquement
+
+**Étape 4** — Entrez votre ticket Mikrotik comme login ET mot de passe
+
+✅ Vous êtes connecté !
+
+Si la page ne s'affiche pas, tapez \`192.168.0.1\` dans votre navigateur.`;
+  }
+
+  // ═══ TICKET / CODE ═══
+  if(msg.includes('ticket')||msg.includes('code')||msg.includes('identifiant')){
+    return `🎫 **Votre ticket Mikrotik**
+
+Votre ticket est affiché sur votre dashboard (page Accueil).
+
+Pour l'utiliser :
+1. Connectez-vous au WiFi \`TNTY_5GHZ/0344127501\`
+2. Ouvrez votre navigateur
+3. Entrez le code comme **login** et **mot de passe**
+
+⚠️ Si vous ne voyez pas votre ticket ici, c'est que votre paiement n'a pas encore été validé. Contactez l'administrateur via la messagerie.`;
+  }
+
+  // ═══ PAGE NE S'AFFICHE PAS ═══
+  if(msg.includes('page')||msg.includes('affiche pas')||msg.includes('navigateur')||msg.includes('portail')){
+    return `🔧 **La page de connexion ne s'affiche pas ?**
+
+Essayez dans cet ordre :
+
+1. Tapez directement \`192.168.0.1\` dans votre navigateur
+2. Vérifiez que vous êtes bien connecté au WiFi NTY Starnet
+3. Désactivez votre données mobiles (4G/5G) le temps de vous connecter
+4. Essayez avec le navigateur Chrome
+5. Videz le cache de votre navigateur
+
+Si ça ne marche toujours pas, tapez "capteur" pour configurer votre équipement.`;
+  }
+
+  // ═══ CONNEXION LENTE ═══
+  if(msg.includes('lent')||msg.includes('lente')||msg.includes('lenteur')||msg.includes('vitesse')||msg.includes('lentement')||msg.includes('lag')){
+    return `🐢 **Connexion lente — Solutions étape par étape**
+
+**🔌 ÉTAPE 1 — Vérifiez vos câbles**
+• Un câble mal branché ou abîmé peut réduire drastiquement la vitesse
+• Débranchez et rebranchez fermement tous les câbles réseau
+• Vérifiez que les témoins LED du câble sont bien verts
+
+**💡 ÉTAPE 2 — Vérifiez les témoins**
+• Tous les témoins doivent être verts et stables
+• Un témoin orange ou clignotant anormalement = problème
+
+**🔄 ÉTAPE 3 — Redémarrez votre capteur**
+• Débranchez-le 30 secondes, rebranchez
+• Attendez 2 minutes que la connexion se stabilise
+
+**📶 ÉTAPE 4 — Vérifiez votre signal WiFi**
+• Rapprochez-vous de votre capteur ou de l'émetteur NTY
+• Les obstacles (murs épais, métal) réduisent le signal
+
+**📊 ÉTAPE 5 — Vérifiez votre quota**
+• Si vous avez un forfait 100Go ou 200Go, vérifiez votre consommation sur l'Accueil
+• Un quota dépassé peut ralentir ou couper la connexion
+
+**⏰ ÉTAPE 6 — Heures de pointe**
+• La connexion peut être plus lente entre 19h et 22h
+• Essayez à un autre moment pour comparer
+
+Si la lenteur persiste, envoyez une 📷 photo de vos témoins à l'admin ! 🙏`;
+  }
+
+  // ═══ CONFIGURATION CAPTEUR TP-LINK ═══
+  if(msg.includes('tp-link')||msg.includes('tp link')||msg.includes('tplink')){
+    const ip=getAvailableIPs()[0]||'192.168.0.100';
+    return `📡 **Configuration TP-Link**
+
+**Étape 1** — Connectez votre PC/téléphone au TP-Link via WiFi ou câble
+
+**Étape 2** — Ouvrez votre navigateur et tapez : \`192.168.0.254\` ou \`tplinkwifi.net\`
+
+**Étape 3** — Connectez-vous (login: \`admin\` / mot de passe: \`admin\` ou laissez vide)
+
+**Étape 4** — Allez dans **"Mode"** → Choisissez **"Client"** ou **"WISP"**
+
+**Étape 5** — Scannez les réseaux → Sélectionnez \`TNTY_5GHZ/0344127501\` → Entrez le mot de passe \`42024...\`
+
+**Étape 6** — Dans les paramètres réseau, mettez :
+• IP : \`${ip}\`
+• Masque : \`255.255.255.0\`
+• Passerelle : \`192.168.0.1\`
+• DNS : \`8.8.8.8\`
+
+**Étape 7** — Enregistrez et redémarrez le TP-Link
+
+✅ Attendez 1 minute puis testez votre connexion !`;
+  }
+
+  // ═══ CONFIGURATION COMFAST ═══
+  if(msg.includes('comfast')||msg.includes('n312')||msg.includes('com fast')){
+    const ip=getAvailableIPs()[1]||'192.168.0.101';
+    return `📡 **Configuration Comfast N312**
+
+**Étape 1** — Connectez votre PC/téléphone au Comfast via WiFi
+
+**Étape 2** — Tapez dans votre navigateur : \`192.168.10.1\`
+
+**Étape 3** — Login: \`admin\` / Mot de passe: \`admin\`
+
+**Étape 4** — Allez dans **"Working Mode"** → Sélectionnez **"Client Mode"** (mode client/répéteur)
+
+**Étape 5** — Cliquez **"Scan"** → Sélectionnez \`TNTY_5GHZ/0344127501\` → Entrez \`42024...\`
+
+**Étape 6** — Dans **"LAN Settings"** :
+• IP LAN : \`${ip}\`
+• Masque : \`255.255.255.0\`
+• Passerelle : \`192.168.0.1\`
+
+**Étape 7** — Cliquez **"Save & Apply"** → Redémarrez
+
+✅ Reconnectez-vous au WiFi Comfast et testez !`;
+  }
+
+  // ═══ CONFIGURATION TENDA ═══
+  if(msg.includes('tenda')){
+    const ip=getAvailableIPs()[2]||'192.168.0.102';
+    return `📡 **Configuration Tenda**
+
+**Étape 1** — Connectez votre appareil au Tenda via WiFi
+
+**Étape 2** — Tapez dans le navigateur : \`192.168.0.1\` ou \`tendawifi.com\`
+
+**Étape 3** — Pas de mot de passe au départ (ou \`admin\`)
+
+**Étape 4** — Allez dans **"Mode"** → Choisissez **"Client universel (WISP)"**
+
+**Étape 5** — Cliquez **"Sélectionner"** → Choisissez \`TNTY_5GHZ/0344127501\` → Entrez \`42024...\`
+
+**Étape 6** — Paramètres réseau :
+• IP WAN : \`${ip}\`
+• Masque : \`255.255.255.0\`
+• Passerelle : \`192.168.0.1\`
+• DNS : \`8.8.8.8\`
+
+**Étape 7** — **"Enregistrer"** → Redémarrez le Tenda
+
+✅ Testez votre connexion après 1 minute !`;
+  }
+
+  // ═══ CAPTEUR (sans préciser la marque) ═══
+  if(msg.includes('capteur')||msg.includes('routeur')||msg.includes('configur')||msg.includes('installer')||msg.includes('installation')){
+    return `📡 **Configuration de votre capteur**
+
+Quelle est la marque de votre capteur ? Tapez l'un de ces mots :
+
+• **"TP-Link"** — pour un capteur TP-Link
+• **"Comfast"** ou **"N312"** — pour un Comfast N312
+• **"Tenda"** — pour un Tenda
+
+Je vous donnerai les instructions étape par étape selon votre marque ! 😊`;
+  }
+
+  // ═══ IP / ADRESSE ═══
+  if(msg.includes('adresse ip')||msg.includes('ip ')||msg.includes('192.168')){
+    const avail=getAvailableIPs().slice(0,5);
+    return `🌐 **Adresses IP disponibles**
+
+Voici des adresses IP disponibles pour votre capteur :
+${avail.map((ip,i)=>'• `'+ip+'`').join('\n')}
+
+**Paramètres réseau à utiliser :**
+• Adresse IP : une des adresses ci-dessus
+• Masque de sous-réseau : \`255.255.255.0\`
+• Passerelle : \`192.168.0.1\`
+• DNS primaire : \`8.8.8.8\`
+• DNS secondaire : \`8.8.4.4\``;
+  }
+
+  // ═══ PAIEMENT ═══
+  if(msg.includes('paiement')||msg.includes('payer')||msg.includes('renouveler')||msg.includes('abonnement')){
+    return `💳 **Renouveler votre abonnement**
+
+1. Allez dans l'onglet **"Paiement"** en bas de l'écran
+2. Choisissez votre forfait
+3. Envoyez le paiement Mobile Money sur :
+   • \`0344127501\` — Rojo Rindra
+   • \`0346341775\` — Rasoamanana Ny Tiana (NY)
+   • \`0321825114\` — Rasoamanana Ny Tiana (NY)
+4. Remplissez le formulaire avec la date et la référence
+5. Ajoutez une photo du reçu si possible
+6. Envoyez la demande ✅
+
+L'administrateur validera votre paiement très rapidement !`;
+  }
+
+  // ═══ PAS DE CONNEXION / NE MARCHE PAS ═══
+  if(msg.includes('marche pas')||msg.includes('fonctionne pas')||msg.includes('pas de connexion')||msg.includes('déconnecté')||msg.includes('plus de connexion')||msg.includes('internet')||msg.includes('wifi')){
+    return `❌ **Problème de connexion — Suivez ces étapes dans l'ordre**
+
+**🔌 ÉTAPE 1 — Vérifiez les câbles**
+• Vérifiez que le câble entre votre capteur et votre routeur/switch est bien branché des deux côtés
+• Débranchez et rebranchez fermement chaque câble
+• Si le câble est abîmé ou plié, essayez avec un autre câble
+
+**💡 ÉTAPE 2 — Vérifiez les témoins lumineux (LEDs)**
+• Regardez les petites lumières sur votre capteur :
+  → 🟢 **Vert fixe** = Normal, tout va bien
+  → 🟠 **Orange/Rouge fixe** = Problème de connexion
+  → ⚡ **Clignotant rapidement** = En train de se connecter (attendez)
+  → ❌ **Éteint** = Pas d'alimentation, vérifiez le câble d'alimentation
+
+**🔄 ÉTAPE 3 — Redémarrez votre équipement**
+• Débranchez votre capteur de la prise électrique
+• Attendez **30 secondes** (important !)
+• Rebranchez et attendez **1 à 2 minutes** que les témoins se stabilisent
+
+**📶 ÉTAPE 4 — Vérifiez le WiFi**
+• Déconnectez-vous du WiFi et reconnectez-vous à \`TNTY_5GHZ/0344127501\`
+• Désactivez vos données mobiles (4G/5G) pendant la connexion
+
+**✅ ÉTAPE 5 — Vérifiez votre abonnement**
+• Allez sur l'onglet **Accueil** et vérifiez que votre abonnement est actif
+• Si expiré → renouvelez via l'onglet **Paiement**
+
+Si après tout ça ça ne marche toujours pas, envoyez une **📷 photo de vos témoins lumineux** et contactez l'administrateur via l'onglet **👨‍💼 Admin** ! 🙏`;
+  }
+
+  // ═══ TÉMOINS / LUMIÈRES / LEDS ═══
+  if(msg.includes('témoin')||msg.includes('lumière')||msg.includes('led')||msg.includes('voyant')||msg.includes('clignot')||msg.includes('rouge')||msg.includes('orange')){
+    return `💡 **Que signifient les témoins lumineux ?**
+
+**Sur votre capteur WiFi :**
+→ 🟢 **Vert fixe** = Connexion normale, tout va bien
+→ 🟢 **Vert clignotant** = Données en transit (normal)
+→ 🟠 **Orange fixe** = Problème de connexion réseau
+→ 🔴 **Rouge fixe** = Erreur — pas de connexion internet
+→ ⚡ **Clignotant rapide** = En cours de démarrage, attendez 2 minutes
+→ ❌ **Éteint** = Pas d'alimentation électrique
+
+**Sur le port câble (LAN) :**
+→ 🟢 **Vert** = Câble bien branché et actif
+→ ❌ **Éteint** = Câble débranché ou défectueux → vérifiez le câble
+
+**Solutions immédiates :**
+1. Débranchez et rebranchez tous les câbles fermement
+2. Redémarrez le capteur (débranchez 30 sec, rebranchez)
+3. Si les témoins ne reviennent pas au vert après 2 minutes → contactez l'admin
+
+📷 Envoyez une photo de vos témoins via le bouton 📷 pour une aide plus précise !`;
+  }
+
+  // ═══ CÂBLES ═══
+  if(msg.includes('câble')||msg.includes('cable')||msg.includes('branché')||msg.includes('brancher')||msg.includes('fil')||msg.includes('prise')){
+    return `🔌 **Vérification des câbles**
+
+**Quels câbles vérifier ?**
+
+1. **Câble d'alimentation** (électrique) de votre capteur
+   → Bien branché dans la prise ? Prise fonctionnelle ?
+
+2. **Câble réseau (RJ45)** entre votre capteur et le point d'accès NTY
+   → Les deux bouts bien enfoncés ? (vous devez entendre un "clic")
+   → Le témoin LED du port doit s'allumer en vert
+
+3. **Câble entre votre PC et votre capteur** (si vous utilisez un câble)
+   → Débranchez et rebranchez des deux côtés
+
+**Procédure recommandée :**
+1. Débranchez TOUS les câbles
+2. Attendez 10 secondes
+3. Rebranchez dans l'ordre : alimentation d'abord, réseau ensuite
+4. Attendez 2 minutes et vérifiez les témoins lumineux
+
+💡 Si un câble est plié, écrasé ou abîmé → remplacez-le, c'est souvent la cause du problème !`;
+  }
+
+  // ═══ COUPURE ÉLECTRIQUE ═══
+  if(msg.includes('courant')||msg.includes('électricité')||msg.includes('coupure')||msg.includes('panne')){
+    return `⚡ **Coupure électrique ?**
+
+En cas de coupure de courant dans votre zone, le WiFi NTY Starnet sera temporairement indisponible — c'est normal et cela n'affecte pas votre abonnement.
+
+✅ La connexion reprendra **automatiquement** dès le retour du courant.
+
+⏳ Votre abonnement **continue de courir** normalement pendant la coupure.
+
+Si la connexion ne revient pas après le retour du courant, redémarrez votre capteur en le débranchant 30 secondes.`;
+  }
+
+  // ═══ BONJOUR / SALUT ═══
+  if(msg.includes('bonjour')||msg.includes('salut')||msg.includes('bonsoir')||msg.includes('allo')||msg.includes('hello')||msg.includes('hi')||msg===''||msg.length<4){
+    return `👋 **Bonjour ! Je suis l'assistant NTY Starnet.**
+
+Je peux vous aider avec :
+
+🔌 **"connexion"** — Comment se connecter au WiFi
+🎫 **"ticket"** — Utiliser votre ticket Mikrotik
+📡 **"capteur"** — Configurer votre équipement (TP-Link, Comfast, Tenda)
+🐢 **"lent"** — Problème de vitesse
+❌ **"ne marche pas"** — Dépannage connexion
+💳 **"paiement"** — Renouveler votre abonnement
+🌐 **"adresse IP"** — Trouver une IP disponible
+
+Tapez votre problème et je vous aide ! 😊`;
+  }
+
+  // ═══ RÉPONSE PAR DÉFAUT ═══
+  return `🤖 Je n'ai pas bien compris votre question. Voici ce que je peux vous aider :
+
+• Tapez **"connexion"** pour savoir comment vous connecter
+• Tapez **"capteur"** pour configurer votre équipement
+• Tapez **"ticket"** pour utiliser votre ticket Mikrotik
+• Tapez **"ne marche pas"** pour un dépannage rapide
+• Tapez **"paiement"** pour renouveler votre abonnement
+
+Ou contactez directement l'administrateur via ce chat — il répond rapidement ! 😊`;
+}
+
+function formatBotMsg(text){
+  return text
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\`(.+?)\`/g,'<code style="background:rgba(99,179,255,0.12);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--accent2)">$1</code>')
+    .replace(/\n/g,'<br>');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
