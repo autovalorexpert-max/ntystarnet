@@ -274,7 +274,7 @@ async function renderClientMessages(){
     // ═══ ADMIN CHAT ═══
     html+='<div id="chat-admin-panel" style="display:none"><div class="chat-card"><div class="chat-header"><div class="chat-avatar">🛜</div><div><div class="chat-name">NTY Starnet Admin</div><div class="chat-status">● En ligne</div></div></div>';
     html+='<div class="msg-list" id="c-msg-list">';
-    if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Posez votre question à l'administrateur !</p></div>';
+    if(!msgs.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Posez votre question à l administrateur !</p></div>';
     else msgs.forEach(m=>{
       const mine=m.sender==='client';
       if(m.content&&m.content.startsWith('[IMG]')){
