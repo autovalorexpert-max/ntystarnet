@@ -697,6 +697,8 @@ async function openDetail(id){
     html+='<label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="edit-ip" value="'+(cl.ip_address||'')+'" placeholder="Ex: 192.168.0.50">';
     html+='<label class="inp-label">📍 Zone</label><select class="inp" id="edit-zone">'+editZones.map(z=>'<option '+(cl.zone===z.name?'selected':'')+'>'+z.name+'</option>').join('')+'</select>';
     html+='<label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimite 5 appareils','Illimite 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select>';
+    html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de debut abonnement</label><input class="inp" type="date" id="edit-start" value="'+(cl.start_date||'')+'">';
+    html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de fin (expiration)</label><input class="inp" type="date" id="edit-expiry" value="'+(cl.expiry_date||'')+'">';
     html+='<button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
 
     showModal(html);
