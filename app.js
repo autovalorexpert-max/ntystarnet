@@ -720,7 +720,11 @@ async function saveClientEdit(id){
   const ip=document.getElementById('edit-ip').value.trim();const zone=document.getElementById('edit-zone')?.value||'';const plan=document.getElementById('edit-plan').value;
   const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 5 appareils':'65.000','Illimite 9+ appareils':'90.000'};
   if(!name||!user){toast('Nom et username requis','error');return;}
+  const startDate=document.getElementById('edit-start')?.value||null;
+  const expiryDate=document.getElementById('edit-expiry')?.value||null;
   const updates={name,username:user,phone,ip_address:ip,zone,plan,plan_price:prices[plan]};
+  if(startDate)updates.start_date=startDate;
+  if(expiryDate)updates.expiry_date=expiryDate;
   if(pass){if(pass.length<4){toast('Mot de passe trop court','error');return;}updates.password=pass;}
   try{await sbPatch('clients','id=eq.'+id,updates);closeModal();toast('✅ Client modifie !');renderAdminClients();}
   catch(e){toast('Erreur. Username peut-etre deja utilise.','error');}
