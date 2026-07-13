@@ -177,8 +177,17 @@ function renderClientPaiement(){
   // Section prorata si abonnement actif
   if(me.status==='active'&&me.expiry_date){
     const expDay=new Date(me.expiry_date).getDate()+1;
-    html+='<div class="prorata-card"><div class="prorata-title">📅 Changer ma date de renouvellement</div>';
-    html+='<div class="prorata-desc">Date actuelle : renouvellement le <strong>'+expDay+'</strong> de chaque mois.<br>Choisissez une nouvelle date et payez le prorata.</div>';
+    html+='<div class="prorata-card">';
+    html+='<div class="prorata-title">📅 Changer ma date de renouvellement</div>';
+    html+='<div class="prorata-steps">';
+    html+='<div class="prorata-step"><div class="prorata-step-num">1</div><div class="prorata-step-text"><strong>Choisissez votre nouvelle date</strong><br>Selectionnez le jour du mois ou vous souhaitez renouveler desormais.</div></div>';
+    html+='<div class="prorata-step"><div class="prorata-step-num">2</div><div class="prorata-step-text"><strong>Calculez le montant</strong><br>L application calcule automatiquement le montant a payer pour couvrir les jours entre votre date actuelle et votre nouvelle date. Ce montant est base sur votre prix journalier (prix mensuel ÷ 30).</div></div>';
+    html+='<div class="prorata-step"><div class="prorata-step-num">3</div><div class="prorata-step-text"><strong>Payez le prorata</strong><br>Envoyez le montant calcule par Mobile Money, puis soumettez votre demande avec la photo du recu.</div></div>';
+    html+='<div class="prorata-step"><div class="prorata-step-num">4</div><div class="prorata-step-text"><strong>Validation par l administrateur</strong><br>Apres validation, votre date de renouvellement change automatiquement. Ce changement est definitif.</div></div>';
+    html+='<div class="prorata-step"><div class="prorata-step-num">5</div><div class="prorata-step-text"><strong>Nouveau cycle</strong><br>A partir de votre nouvelle date, vous renouvelez votre abonnement complet chaque mois a cette meme date.</div></div>';
+    html+='</div>';
+    html+='<div class="prorata-info-box">ℹ️ Exemple : Vous payez le <strong>9</strong> du mois et voulez passer au <strong>20</strong>. Vous payez le prorata pour 11 jours, puis le <strong>20</strong> vous payez votre abonnement complet normalement.</div>';
+    html+='<div class="prorata-desc" style="margin-top:12px">Votre date actuelle : renouvellement le <strong>'+expDay+'</strong> de chaque mois.</div>';
     html+='<label class="inp-label">Nouvelle date souhaitee</label>';
     html+='<select class="inp" id="prorata-day" onchange="calcProrataDisplay()">';
     for(let d=1;d<=28;d++){html+='<option value="'+d+'"'+(d===expDay?' selected':'')+'>Le '+d+' de chaque mois</option>';}
@@ -697,8 +706,8 @@ async function openDetail(id){
     html+='<label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="edit-ip" value="'+(cl.ip_address||'')+'" placeholder="Ex: 192.168.0.50">';
     html+='<label class="inp-label">📍 Zone</label><select class="inp" id="edit-zone">'+editZones.map(z=>'<option '+(cl.zone===z.name?'selected':'')+'>'+z.name+'</option>').join('')+'</select>';
     html+='<label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimite 5 appareils','Illimite 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select>';
-    html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de debut abonnement</label><input class="inp" type="date" id="edit-start" value="'+(cl.start_date||'')+'">';
-    html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de fin (expiration)</label><input class="inp" type="date" id="edit-expiry" value="'+(cl.expiry_date||'')+'">';
+    html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de debut abonnement</label><input class="inp" type="date" id="edit-start" value="'+(cl.start_date||'')+'" onchange="autoCalcExpiry()">';
+    html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de fin (expiration) — calculee automatiquement</label><input class="inp" type="date" id="edit-expiry" value="'+(cl.expiry_date||'')+'">';
     html+='<button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
 
     showModal(html);
@@ -832,6 +841,13 @@ function easterEgg(el){
 // CSS additionnel pour prorata et tags
 const style=document.createElement('style');
 style.textContent=`
+.prorata-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.prorata-step{display:flex;gap:12px;align-items:flex-start}
+.prorata-step-num{width:26px;height:26px;min-width:26px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.prorata-step-text{font-size:12px;color:var(--text2);line-height:1.5;padding-top:4px}
+.prorata-step-text strong{color:var(--text);display:block;margin-bottom:2px}
+.prorata-info-box{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5}
+.prorata-info-box strong{color:var(--accent2)}
 .prorata-card{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,6,0.04));border:1px solid rgba(245,158,11,0.25);border-radius:var(--r2);padding:16px;margin-bottom:12px}
 .prorata-title{font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:6px}
 .prorata-desc{font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5}
@@ -847,6 +863,19 @@ style.textContent=`
 document.head.appendChild(style);
 
 // INIT
+function autoCalcExpiry(){
+  const startVal=document.getElementById('edit-start')?.value;
+  if(!startVal)return;
+  // Calculer date de fin = debut + 1 mois - 1 jour
+  const start=new Date(startVal);
+  const end=new Date(start);
+  end.setMonth(end.getMonth()+1);
+  end.setDate(end.getDate()-1);
+  const endStr=end.toISOString().split('T')[0];
+  const expiryEl=document.getElementById('edit-expiry');
+  if(expiryEl)expiryEl.value=endStr;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initStars();
   document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
