@@ -205,7 +205,7 @@ function renderClientPaiement(){
   plans.forEach((pl,i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+pl.n+'\')"><div class="plan-icon">'+pl.icon+'</div><div class="plan-info"><div class="plan-name">'+pl.n+'</div><div class="plan-desc">'+pl.d+'</div></div><div class="plan-price">'+pl.p+' Ar</div></div>';});
   html+='</div><div class="section-card"><div class="section-head">Details du paiement</div>';
   html+='<label class="inp-label">Date du paiement *</label><input class="inp" type="date" id="c-paydate" max="'+today()+'">';
-  html+='<label class="inp-label">Reference du paiement</label><input class="inp" type="text" id="c-payref" placeholder="Ex: TXN123456789">';
+  html+='<label class="inp-label">Nom de l envoyeur</label><input class="inp" type="text" id="c-payref" placeholder="Ex: Rakoto Jean">';
   html+='<label class="inp-label">Photo du recu</label>';
   html+='<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'c-photo\').click()"><div class="upload-icon">📷</div><div class="upload-text">Appuyer pour ajouter une photo</div><input type="file" id="c-photo" accept="image/*" style="display:none" onchange="previewPhoto()"></div>';
   html+='<div id="photo-preview" style="display:none;margin-bottom:12px"><img id="preview-img" style="width:100%;border-radius:12px;max-height:200px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removePhoto()">🗑 Supprimer</button></div>';
@@ -254,7 +254,7 @@ function showProrataPayment(){
     +'<div class="pay-num-row"><div class="pay-num">0346341775</div><div class="pay-num-name">Rasoamanana Ny Tiana</div></div>'
     +'<div class="pay-box-warn">⚠️ Frais de retrait a votre charge</div></div>'
     +'<label class="inp-label">Date du paiement *</label><input class="inp" type="date" id="prorata-paydate" max="'+today()+'">'
-    +'<label class="inp-label">Reference</label><input class="inp" type="text" id="prorata-ref" placeholder="Ex: TXN123456789">'
+    +'<label class="inp-label">Nom de l envoyeur</label><input class="inp" type="text" id="prorata-ref" placeholder="Ex: Rakoto Jean">'
     +'<label class="inp-label">Photo du recu</label>'
     +'<div class="upload-zone" id="prorata-upload-zone" onclick="document.getElementById(\'pp-photo\').click()"><div class="upload-icon">📷</div><div class="upload-text">Ajouter une photo</div><input type="file" id="pp-photo" accept="image/*" style="display:none" onchange="previewProrataPhoto()"></div>'
     +'<div id="pp-preview" style="display:none;margin-bottom:12px"><img id="pp-img" style="width:100%;border-radius:12px;max-height:180px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removeProrataPhoto()">🗑 Supprimer</button></div>'
