@@ -69,9 +69,9 @@ async function doLogin(){
   btn.innerHTML='<div class="btn-spinner"></div> Connexion...';btn.disabled=true;
   try{
     const admins=await sbGet('admins','username=eq.'+u+'&password=eq.'+p);
-    if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';showPage('page-admin');aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
+    if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';showPage('page-admin');checkExpiredClients();aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
     const clients=await sbGet('clients','username=eq.'+u+'&password=eq.'+p);
-    if(clients.length>0){me={...clients[0],role:'client'};err.style.display='none';showPage('page-client');cPage('home',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
+    if(clients.length>0){me={...clients[0],role:'client'};err.style.display='none';showPage('page-client');checkExpiredClient(clients[0]);cPage('home',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
     err.style.display='flex';err.querySelector('.err-msg').textContent='Identifiants incorrects';
   }catch(e){err.style.display='flex';err.querySelector('.err-msg').textContent='Erreur de connexion. Reessayez.';}
   btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;
@@ -863,6 +863,35 @@ style.textContent=`
 document.head.appendChild(style);
 
 // INIT
+// ═══ VÉRIFICATION EXPIRATION AUTOMATIQUE ═══
+async function checkExpiredClients(){
+  // Vérifie et expire tous les clients dont la date est dépassée (côté admin)
+  try{
+    const today=new Date().toISOString().split('T')[0];
+    // Récupérer tous les clients actifs dont la date d'expiration est dépassée
+    const expired=await sbGet('clients','status=eq.active&expiry_date=lt.'+today);
+    if(expired.length===0)return;
+    // Les mettre en "expired" en batch
+    await sbPatch('clients','status=eq.active&expiry_date=lt.'+today,{status:'expired'});
+    console.log('✅ '+expired.length+' client(s) expire(s) automatiquement');
+  }catch(e){console.log('Erreur vérification expiration:',e);}
+}
+
+async function checkExpiredClient(client){
+  // Vérifie si CE client spécifique est expiré à sa connexion
+  try{
+    if(client.status!=='active'||!client.expiry_date)return;
+    const today=new Date().toISOString().split('T')[0];
+    const expiry=client.expiry_date;
+    if(expiry<today){
+      // Expirer ce client
+      await sbPatch('clients','id=eq.'+client.id,{status:'expired'});
+      me.status='expired';
+      console.log('✅ Client '+client.name+' expire automatiquement');
+    }
+  }catch(e){console.log('Erreur vérification client:',e);}
+}
+
 function autoCalcExpiry(){
   const startVal=document.getElementById('edit-start')?.value;
   if(!startVal)return;
