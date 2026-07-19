@@ -25,9 +25,11 @@ function fmtDateFull(d){if(!d)return'—';try{return new Date(d).toLocaleDateStr
 function daysLeft(exp){if(!exp)return null;return Math.ceil((new Date(exp)-new Date())/(1000*60*60*24));}
 function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d.toISOString().split('T')[0];}
 function addOneMonth(date){
+  // Debut le 19 juillet → fin le 18 aout (meme jour -1)
   const d=new Date(date);const day=d.getDate();
   d.setMonth(d.getMonth()+1);
   if(d.getDate()!==day)d.setDate(0);
+  d.setDate(d.getDate()-1);
   return d.toISOString().split('T')[0];
 }
 function calcProrata(planPrice,startDate,newDay){
@@ -123,11 +125,11 @@ async function renderClientHome(){
 
     // Notifications
     if(u.status==='expired'||dl!==null&&dl<0)html+='<div class="notif-card notif-danger" style="border-width:2px"><div class="notif-icon">🚫</div><div class="notif-body"><div class="notif-title">Connexion coupee automatiquement</div><div class="notif-msg">Votre abonnement a expire le <strong>'+endFmt+'</strong>. Renouvelez pour retablir la connexion.</div></div></div>';
-    if(dl!==null&&dl<=5&&dl>0)html+='<div class="notif-card notif-warning"><div class="notif-icon">⏰</div><div class="notif-body"><div class="notif-title">Renouvellement urgent !</div><div class="notif-msg">Expire le <strong>'+endFmt+'</strong> dans <strong>'+dl+' jour(s)</strong>. Sans renouvellement, connexion coupee automatiquement.</div></div></div>';
-    if(dl===0)html+='<div class="notif-card notif-danger"><div class="notif-icon">🔴</div><div class="notif-body"><div class="notif-title">Expire ce soir a 23h59 !</div><div class="notif-msg">Renouvelez immediatement !</div></div></div>';
+    if(dl!==null&&dl<=5&&dl>0)html+='<div class="notif-card notif-warning"><div class="notif-icon">⏰</div><div class="notif-body"><div class="notif-title">⚠️ Renouvelez maintenant !</div><div class="notif-msg">Votre connexion sera <strong>coupee automatiquement le '+endFmt+' a 23h59</strong> dans <strong>'+dl+' jour(s)</strong>.<br>Payez votre abonnement <strong>avant le '+endFmt+'</strong> pour ne pas perdre votre connexion !</div></div></div>';
+    if(dl===0)html+='<div class="notif-card notif-danger" style="border-width:2px"><div class="notif-icon">🚨</div><div class="notif-body"><div class="notif-title">Derniere chance — Expire ce soir !</div><div class="notif-msg">Votre connexion sera <strong>coupee ce soir a 23h59</strong>. Renouvelez <strong>maintenant</strong> pour ne pas perdre votre acces WiFi !</div></div></div>';
     if(pays.some(p=>p.status==='pending'))html+='<div class="notif-card notif-info"><div class="notif-icon">💳</div><div class="notif-body"><div class="notif-title">Paiement en cours de validation</div><div class="notif-msg">Votre paiement est en cours de traitement.</div></div></div>';
-    if(u.start_date&&u.expiry_date&&u.status==='active')html+='<div class="notif-card notif-info"><div class="notif-icon">📅</div><div class="notif-body"><div class="notif-title">Periode abonnement</div><div class="notif-msg">Du <strong>'+startFmt+'</strong> au <strong>'+endFmt+' a 23h59</strong>'+(renewDay?' · Renouvellement le <strong>'+renewDay+'</strong> de chaque mois':'')+'.</div></div></div>';
-    if(u.status==='active'&&dl!==null&&dl>5)html+='<div class="notif-card notif-subtle"><div class="notif-icon">ℹ️</div><div class="notif-body"><div class="notif-title">Information importante</div><div class="notif-msg">En cas de non-renouvellement, votre connexion sera <strong>automatiquement suspendue</strong> le <strong>'+endFmt+' a 23h59</strong>.</div></div></div>';
+    if(u.start_date&&u.expiry_date&&u.status==='active')html+='<div class="notif-card notif-info"><div class="notif-icon">📅</div><div class="notif-body"><div class="notif-title">Periode abonnement</div><div class="notif-msg">Du <strong>'+startFmt+'</strong> au <strong>'+endFmt+' a 23h59</strong>'+(renewDay?' · Renouvellement le <strong>'+renewDay+'</strong> de chaque mois':'')+'.<br>💡 Payez <strong>avant le '+endFmt+'</strong> pour eviter toute coupure.</div></div></div>';
+    if(u.status==='active'&&dl!==null&&dl>5)html+='<div class="notif-card notif-subtle"><div class="notif-icon">ℹ️</div><div class="notif-body"><div class="notif-title">Information importante</div><div class="notif-msg">Votre connexion sera <strong>automatiquement coupee</strong> le <strong>'+endFmt+' a 23h59</strong> si vous n avez pas renouvele. Pensez a payer <strong>avant le '+endFmt+'</strong> pour eviter toute interruption !</div></div></div>';
 
     // Hero card
     html+='<div class="hero-card"><div class="hero-top"><div><div class="hero-label">ABONNEMENT</div><span class="badge badge-'+(u.status||'pending')+'">'+(statusMap[u.status||'pending'])+'</span></div><div class="hero-right"><div class="hero-label">PLAN</div><div class="hero-plan">'+(u.plan||'—')+'</div><div class="hero-price">'+(u.plan_price||'—')+' Ar/mois</div></div></div>';
@@ -170,7 +172,7 @@ async function renderClientHome(){
 // CLIENT PAIEMENT
 function renderClientPaiement(){
   const c=document.getElementById('c-content');photoData=null;
-  const plans=[{n:'100 Go',p:'40.000',d:'Valable 1 mois',icon:'📶'},{n:'200 Go',p:'55.000',d:'Valable 1 mois',icon:'📶'},{n:'Illimite 5 appareils',p:'65.000',d:'1 mois · 5 appareils',icon:'🏠'},{n:'Illimite 9+ appareils',p:'90.000',d:'1 mois · 9+ appareils',icon:'🏢'}];
+  const plans=[{n:'100 Go',p:'40.000',d:'Valable 1 mois',icon:'📶'},{n:'200 Go',p:'55.000',d:'Valable 1 mois',icon:'📶'},{n:'Illimite 6 appareils',p:'65.000',d:'1 mois · 6 appareils',icon:'🏠'},{n:'Illimite 9+ appareils',p:'90.000',d:'1 mois · 9+ appareils',icon:'🏢'}];
   const nums=[{n:'0344127501',name:'Rojo Rindra'},{n:'0346341775',name:'Rasoamanana Ny Tiana'},{n:'0321825114',name:'Rasoamanana Ny Tiana'}];
   let html='<div class="fade-up"><div class="page-header"><div class="page-title">💳 Paiement</div><div class="page-sub">Renouveler ou changer de date</div></div>';
 
@@ -283,7 +285,7 @@ function removePhoto(){photoData=null;document.getElementById('c-photo').value='
 async function submitPay(){
   const d=document.getElementById('c-paydate').value;
   if(!d){toast('Veuillez indiquer la date du paiement.','error');return;}
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 5 appareils':'65.000','Illimite 9+ appareils':'90.000'};
+  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
   try{
     await sbPost('payments',{client_id:me.id,client_name:me.name,plan:selPlanName,amount:prices[selPlanName],payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData,payment_type:'abonnement'});
     await sbPatch('clients','id=eq.'+me.id,{status:'pending'});me.status='pending';photoData=null;
@@ -569,8 +571,10 @@ async function renderAdminClients(search=''){
 // ADMIN PAIEMENTS
 async function renderAdminPaiements(filter='pending'){
   const c=document.getElementById('a-content');
+  // Afficher spinner immédiatement
+  c.innerHTML='<div class="loading"><div class="spinner"></div><p>Chargement des paiements...</p></div>';
   try{
-    let q='order=created_at.desc';if(filter)q+='&status=eq.'+filter;
+    let q='order=created_at.desc&limit=50';if(filter)q+='&status=eq.'+filter;
     const [pays,freeT]=await Promise.all([sbGet('payments',q),filter==='pending'||filter===''?sbGet('tickets','is_used=eq.false&order=created_at.asc'):Promise.resolve([])]);
     const nextByClient={};freeT.forEach(t=>{if(!nextByClient[t.client_id])nextByClient[t.client_id]=t;});
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">💳 Paiements</div></div>';
@@ -705,7 +709,7 @@ async function openDetail(id){
     html+='<label class="inp-label">Telephone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'">';
     html+='<label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="edit-ip" value="'+(cl.ip_address||'')+'" placeholder="Ex: 192.168.0.50">';
     html+='<label class="inp-label">📍 Zone</label><select class="inp" id="edit-zone">'+editZones.map(z=>'<option '+(cl.zone===z.name?'selected':'')+'>'+z.name+'</option>').join('')+'</select>';
-    html+='<label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimite 5 appareils','Illimite 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select>';
+    html+='<label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimite 6 appareils','Illimite 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select>';
     html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de debut abonnement</label><input class="inp" type="date" id="edit-start" value="'+(cl.start_date||'')+'" onchange="autoCalcExpiry()">';
     html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de fin (expiration) — calculee automatiquement</label><input class="inp" type="date" id="edit-expiry" value="'+(cl.expiry_date||'')+'">';
     html+='<button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
@@ -729,7 +733,7 @@ async function saveClientEdit(id){
   const name=document.getElementById('edit-name').value.trim();const user=document.getElementById('edit-user').value.trim().toLowerCase();
   const pass=document.getElementById('edit-pass').value;const phone=document.getElementById('edit-phone').value.trim();
   const ip=document.getElementById('edit-ip').value.trim();const zone=document.getElementById('edit-zone')?.value||'';const plan=document.getElementById('edit-plan').value;
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 5 appareils':'65.000','Illimite 9+ appareils':'90.000'};
+  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
   if(!name||!user){toast('Nom et username requis','error');return;}
   const startDate=document.getElementById('edit-start')?.value||null;
   const expiryDate=document.getElementById('edit-expiry')?.value||null;
@@ -743,7 +747,7 @@ async function saveClientEdit(id){
 async function showAddClient(){
   let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
   const zOpts=zones.map(z=>'<option>'+z.name+'</option>').join('');
-  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass"><label class="inp-label">Telephone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="n-ip" placeholder="Ex: 192.168.0.50"><label class="inp-label">📍 Zone *</label><select class="inp" id="n-zone">'+zOpts+'</select><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimite 5 appareils</option><option>Illimite 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ"></textarea><button class="btn btn-primary btn-full" onclick="addClient()">✓ Creer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass"><label class="inp-label">Telephone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="n-ip" placeholder="Ex: 192.168.0.50"><label class="inp-label">📍 Zone *</label><select class="inp" id="n-zone">'+zOpts+'</select><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimite 6 appareils</option><option>Illimite 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ"></textarea><button class="btn btn-primary btn-full" onclick="addClient()">✓ Creer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
 }
 async function addClient(){
   const name=document.getElementById('n-name').value.trim();const user=document.getElementById('n-user').value.trim().toLowerCase();
@@ -753,7 +757,7 @@ async function addClient(){
   if(!name||!user||!pass){toast('Remplissez nom, username et mot de passe.','error');return;}
   if(!raw){toast('Ajoutez au moins un ticket.','error');return;}
   const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 5 appareils':'65.000','Illimite 9+ appareils':'90.000'};
+  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
   try{
     const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
     const clientId=nc[0].id;
@@ -895,10 +899,12 @@ async function checkExpiredClient(client){
 function autoCalcExpiry(){
   const startVal=document.getElementById('edit-start')?.value;
   if(!startVal)return;
-  // Calculer date de fin = debut + 1 mois - 1 jour
+  // Fin = debut + 1 mois - 1 jour (19 juil → 18 aout)
   const start=new Date(startVal);
   const end=new Date(start);
+  const day=end.getDate();
   end.setMonth(end.getMonth()+1);
+  if(end.getDate()!==day)end.setDate(0);
   end.setDate(end.getDate()-1);
   const endStr=end.toISOString().split('T')[0];
   const expiryEl=document.getElementById('edit-expiry');
