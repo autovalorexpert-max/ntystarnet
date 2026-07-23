@@ -459,6 +459,7 @@ function aPage(page,btn){
     else if(page==='paiements')renderAdminPaiements();
     else if(page==='messages')renderAdminMessages();
     else if(page==='stats')renderAdminStats();
+    else if(page==='inscriptions')renderAdminInscriptions();
   });
 }
 
@@ -470,6 +471,11 @@ async function renderAdminDashboard(){
     const pPending=payments.filter(p=>p.status==='pending');
     const revenue=payments.filter(p=>p.status==='validated').reduce((s,p)=>s+(parseInt((p.amount||'0').replace(/\./g,''))||0),0);
     const dot=document.getElementById('a-pay-dot');if(dot)dot.style.display=pPending.length>0?'block':'none';
+    // Vérifier inscriptions en attente
+    try{
+      const inscrip=await sbGet('inscriptions','status=eq.pending');
+      const dotI=document.getElementById('a-inscr-dot');if(dotI)dotI.style.display=inscrip.length>0?'block':'none';
+    }catch(e){}
     const soon=clients.filter(x=>{const dl=daysLeft(x.expiry_date);return dl!==null&&dl>=0&&dl<=5;});
     let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
     const cZ=JSON.parse(localStorage.getItem('nty_coupure_zones')||'{}');
@@ -553,7 +559,7 @@ async function renderAdminClients(search=''){
     let q='order=created_at.desc';if(search)q+='&or=(name.ilike.*'+search+'*,username.ilike.*'+search+'*)';
     const [clients,freeT]=await Promise.all([sbGet('clients',q),sbGet('tickets','is_used=eq.false')]);
     const tCount={};freeT.forEach(t=>{tCount[t.client_id]=(tCount[t.client_id]||0)+1;});
-    let html='<div class="fade-up"><div class="page-header-row"><div><div class="page-title">👥 Clients</div><div class="page-sub">'+clients.length+' client(s)</div></div><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div>';
+    let html='<div class="fade-up"><div class="page-header-row"><div><div class="page-title">👥 Clients</div><div class="page-sub">'+clients.length+' client(s)</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="exportClientsExcel()">📊 Excel</button><button class="btn btn-ghost btn-sm" onclick="exportClientsPDF()">📄 PDF</button><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div></div>';
     html+='<div class="search-box"><span class="search-icon">🔍</span><input class="search-inp" type="text" placeholder="Rechercher..." value="'+search+'" oninput="renderAdminClients(this.value)"></div>';
     if(!clients.length)html+='<div class="empty"><div class="empty-icon">👤</div><p>Aucun client</p></div>';
     else{
@@ -827,6 +833,129 @@ async function renderAdminStats(){
     html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+}
+
+// ═══ EXPORT EXCEL ═══
+async function exportClientsExcel(){
+  try{
+    const clients=await sbGet('clients','order=zone.asc,name.asc');
+    const headers=['Nom','Username','Zone','Plan','Prix','Statut','IP','Debut','Fin','Tel'];
+    const rows=clients.map(function(c){return[
+      c.name||'',c.username||'',c.zone||'',c.plan||'',(c.plan_price||'')+'Ar',
+      c.status==='active'?'Actif':c.status==='expired'?'Expire':'En attente',
+      c.ip_address||'',c.start_date||'',c.expiry_date||'',c.phone||''
+    ];});
+    const sep=',';
+    const nl=String.fromCharCode(13,10);
+    const esc=function(v){return'"'+String(v).replace(/"/g,'""')+'"';};
+    const csvLines=[headers.map(esc).join(sep)];
+    rows.forEach(function(r){csvLines.push(r.map(esc).join(sep));});
+    const csvContent='﻿'+csvLines.join(nl);
+    const blob=new Blob([csvContent],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='NTY_Starnet_Clients_'+today()+'.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('✅ Export Excel telecharge ! ('+clients.length+' clients)');
+  }catch(e){toast('Erreur export','error');}
+}
+
+// ═══ EXPORT PDF ═══
+async function exportClientsPDF(){
+  try{
+    const clients=await sbGet('clients','order=zone.asc,name.asc');
+    const ampClients=clients.filter(c=>c.zone==='Ampasapito');
+    const anjClients=clients.filter(c=>c.zone==='Anjanahary');
+    const actifs=clients.filter(c=>c.status==='active').length;
+    const expires=clients.filter(c=>c.status==='expired').length;
+    const pending=clients.filter(c=>c.status==='pending').length;
+    const win=window.open('','_blank');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>NTY Starnet - Liste Clients</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#1a1a2e}h1{color:#3b82f6;text-align:center;margin-bottom:4px}.subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:13px}.stats{display:flex;gap:12px;justify-content:center;margin-bottom:20px}.stat{background:#f0f4ff;border-radius:8px;padding:10px 20px;text-align:center}.stat-num{font-size:22px;font-weight:700;color:#3b82f6}.stat-lbl{font-size:11px;color:#666}.zone-title{background:#3b82f6;color:white;padding:8px 12px;border-radius:6px;margin:16px 0 8px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}th{background:#e8f0fe;padding:8px;text-align:left;border:1px solid #ddd;font-size:11px}td{padding:7px 8px;border:1px solid #eee}tr:nth-child(even){background:#f9faff}.badge-active{background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.badge-expired{background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.badge-pending{background:#fef9c3;color:#ca8a04;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.footer{text-align:center;color:#999;font-size:11px;margin-top:20px;border-top:1px solid #eee;padding-top:12px}@media print{.no-print{display:none}}</style></head><body>');
+    win.document.write('<div class="no-print" style="text-align:center;margin-bottom:16px"><button onclick="window.print()" style="background:#3b82f6;color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px">🖨️ Imprimer / Sauvegarder PDF</button></div>');
+    win.document.write('<h1>📶 NTY Starnet</h1><div class="subtitle">Liste clients — '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})+'</div>');
+    win.document.write('<div class="stats"><div class="stat"><div class="stat-num">'+clients.length+'</div><div class="stat-lbl">Total</div></div><div class="stat"><div class="stat-num" style="color:#16a34a">'+actifs+'</div><div class="stat-lbl">Actifs</div></div><div class="stat"><div class="stat-num" style="color:#dc2626">'+expires+'</div><div class="stat-lbl">Expires</div></div><div class="stat"><div class="stat-num" style="color:#ca8a04">'+pending+'</div><div class="stat-lbl">En attente</div></div></div>');
+    [['Ampasapito',ampClients],['Anjanahary',anjClients]].forEach(function(zd){
+      const zone=zd[0],list=zd[1];
+      if(!list.length)return;
+      win.document.write('<div class="zone-title">📍 '+zone+' — '+list.length+' client(s)</div><table><tr><th>#</th><th>Nom</th><th>Username</th><th>Plan</th><th>IP</th><th>Debut</th><th>Fin</th><th>Statut</th><th>Tel</th></tr>');
+      list.forEach(function(c,i){
+        const badge=c.status==='active'?'badge-active':c.status==='expired'?'badge-expired':'badge-pending';
+        const label=c.status==='active'?'Actif':c.status==='expired'?'Expire':'En attente';
+        win.document.write('<tr><td>'+(i+1)+'</td><td><strong>'+(c.name||'')+'</strong></td><td>'+(c.username||'')+'</td><td>'+(c.plan||'')+'<br><small>'+(c.plan_price||'')+'Ar</small></td><td style="font-family:monospace">'+(c.ip_address||'—')+'</td><td>'+(c.start_date?new Date(c.start_date).toLocaleDateString('fr-FR'):'—')+'</td><td>'+(c.expiry_date?new Date(c.expiry_date).toLocaleDateString('fr-FR'):'—')+'</td><td><span class="'+badge+'">'+label+'</span></td><td>'+(c.phone||'—')+'</td></tr>');
+      });
+      win.document.write('</table>');
+    });
+    win.document.write('<div class="footer">NTY Starnet — Document confidentiel — '+clients.length+' clients</div></body></html>');
+    win.document.close();
+    toast('✅ PDF pret a imprimer !');
+  }catch(e){toast('Erreur export PDF','error');}
+}
+
+// ═══ INSCRIPTIONS ═══
+async function renderAdminInscriptions(){
+  const c=document.getElementById('a-content');
+  c.innerHTML='<div class="loading"><div class="spinner"></div><p>Chargement...</p></div>';
+  try{
+    const inscrip=await sbGet('inscriptions','order=created_at.desc');
+    const pending=inscrip.filter(i=>i.status==='pending');
+    let html='<div class="fade-up"><div class="page-header"><div class="page-title">📝 Inscriptions</div><div class="page-sub">'+inscrip.length+' demande(s) · '+pending.length+' en attente</div></div>';
+    if(!inscrip.length){html+='<div class="empty"><div class="empty-icon">📝</div><p>Aucune inscription pour le moment</p></div>';}
+    else inscrip.forEach(ins=>{
+      const isPending=ins.status==='pending';
+      html+='<div class="inscr-card '+(isPending?'inscr-pending':'inscr-done')+'">';
+      html+='<div class="inscr-top"><div><div class="inscr-name">'+ins.name+'</div><div class="inscr-meta">📞 '+(ins.phone||'—')+' · 📍 '+(ins.zone||'—')+'</div>'+(ins.address?'<div class="inscr-meta">🏠 '+ins.address+'</div>':'')+(ins.message?'<div class="inscr-msg">💬 '+ins.message+'</div>':'')+'</div><div style="text-align:right"><span class="badge badge-'+(isPending?'pending':'active')+'">'+(isPending?'⏳ En attente':'✅ Traite')+'</span><div class="inscr-date">'+fmtDate(ins.created_at)+'</div></div></div>';
+      if(isPending)html+='<div class="inscr-btns"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:12px" onclick="acceptInscription(\''+ins.id+'\',\''+ins.name+'\',\''+(ins.phone||'')+'\',\''+(ins.zone||'')+'\')">✓ Accepter et creer le compte</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:12px" onclick="rejectInscription(\''+ins.id+'\')">✗ Refuser</button></div>';
+      html+='</div>';
+    });
+    html+='</div>';c.innerHTML=html;
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+}
+
+async function acceptInscription(id,name,phone,zone){
+  let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
+  const zOpts=zones.map(z=>'<option '+(z.name===zone?'selected':'')+'>'+z.name+'</option>').join('');
+  let html='<div class="modal-title">✅ Creer le compte <button class="modal-close" onclick="closeModal()">×</button></div>';
+  html+='<p style="font-size:12px;color:var(--text2);margin-bottom:12px">Completez les informations pour <strong>'+name+'</strong></p>';
+  html+='<label class="inp-label">Nom complet *</label><input class="inp" type="text" id="ai-name" value="'+name+'">';
+  html+='<label class="inp-label">Username *</label><input class="inp" type="text" id="ai-user" placeholder="Ex: rakoto">';
+  html+='<label class="inp-label">Mot de passe *</label><input class="inp" type="text" id="ai-pass" placeholder="Ex: rakoto123">';
+  html+='<label class="inp-label">Telephone</label><input class="inp" type="tel" id="ai-phone" value="'+phone+'">';
+  html+='<label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="ai-ip" placeholder="Ex: 192.168.0.50">';
+  html+='<label class="inp-label">📍 Zone</label><select class="inp" id="ai-zone">'+zOpts+'</select>';
+  html+='<label class="inp-label">Plan</label><select class="inp" id="ai-plan"><option>100 Go</option><option>200 Go</option><option>Illimite 6 appareils</option><option>Illimite 9+ appareils</option></select>';
+  html+='<label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="ai-tickets" placeholder="ABC123-XYZ" rows="3"></textarea>';
+  html+='<button class="btn btn-success btn-full" onclick="createFromInscription(\''+id+'\')">✅ Creer le compte</button>';
+  html+='<button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>';
+  showModal(html);
+}
+
+async function createFromInscription(inscriptionId){
+  const name=document.getElementById('ai-name').value.trim();
+  const user=document.getElementById('ai-user').value.trim().toLowerCase();
+  const pass=document.getElementById('ai-pass').value.trim();
+  const phone=document.getElementById('ai-phone').value.trim();
+  const ip=document.getElementById('ai-ip').value.trim();
+  const zone=document.getElementById('ai-zone').value;
+  const plan=document.getElementById('ai-plan').value;
+  const raw=document.getElementById('ai-tickets').value.trim();
+  if(!name||!user||!pass){toast('Nom, username et mot de passe requis','error');return;}
+  if(!raw){toast('Ajoutez au moins un ticket','error');return;}
+  const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
+  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
+  try{
+    const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
+    const clientId=nc[0].id;
+    for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
+    await sbPatch('inscriptions','id=eq.'+inscriptionId,{status:'accepted'});
+    closeModal();toast('✅ Compte cree pour '+name+' !');renderAdminInscriptions();
+  }catch(e){toast('Erreur. Username peut-etre deja utilise.','error');}
+}
+
+async function rejectInscription(id){
+  if(!confirm('Refuser cette inscription ?'))return;
+  try{await sbPatch('inscriptions','id=eq.'+id,{status:'rejected'});toast('Inscription refusee');renderAdminInscriptions();}
+  catch(e){toast('Erreur','error');}
 }
 
 // CONFETTIS & EASTER EGG
