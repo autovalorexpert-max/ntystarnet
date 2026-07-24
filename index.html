@@ -547,6 +547,142 @@ textarea.inp{resize:vertical;min-height:80px}
 /* Notif subtle */
 .notif-subtle{background:rgba(255,255,255,0.02);border-color:var(--border)}
 .notif-subtle .notif-title{color:var(--text2)}
+
+/* ═══ FIX NAV ADMIN ═══ */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(2,8,23,0.92);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(6,1fr);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.app-wrap{padding:70px 16px 90px}
+.content{min-height:200px}
+
+/* ═══ FIX NAV CLIENT ═══ */
+.c-nav,.bottom-nav{position:fixed;bottom:0;left:0;right:0}
+
+/* ═══ FIX TOPBAR ═══ */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(2,8,23,0.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;height:60px}
+
+/* Assurer que le contenu admin est bien positionné */
+#page-admin .app-wrap{padding-top:70px;padding-bottom:90px;padding-left:16px;padding-right:16px}
+#page-admin #a-content{min-height:100px}
+
+/* ═══ BOTTOM NAV BUTTONS ═══ */
+.bottom-nav .nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border:none;background:none;cursor:pointer;color:var(--text3);transition:all var(--transition);position:relative;font-size:9px;font-weight:600;letter-spacing:0.05em;font-family:var(--font);text-transform:uppercase}
+.bottom-nav .nav-btn.active{color:var(--accent2)}
+.bottom-nav .nav-btn svg{transition:transform var(--transition-spring)}
+.bottom-nav .nav-btn.active svg{transform:scale(1.1)}
+.bottom-nav .nav-btn:active{transform:scale(0.92)}
+
+/* ═══ FIX CLIENT NAV ═══ */
+.c-nav{background:rgba(2,8,23,0.92);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+
+
+/* ═══ CORRECTIONS FINALES ═══ */
+#page-client .app-wrap,
+#page-admin .app-wrap{
+  padding-top:68px;
+  padding-bottom:85px;
+  padding-left:16px;
+  padding-right:16px;
+}
+
+/* Topbar avec bonne hauteur */
+.topbar{height:60px;min-height:60px}
+
+/* Bottom nav hauteur fixe */
+.bottom-nav{height:64px;min-height:64px}
+
+/* Responsive PC */
+@media(min-width:600px){
+  #page-client .app-wrap,
+  #page-admin .app-wrap{
+    max-width:600px;
+    margin:0 auto;
+    padding-left:20px;
+    padding-right:20px;
+  }
+  .bottom-nav{
+    max-width:600px;
+    left:50%;
+    transform:translateX(-50%);
+    border-radius:20px 20px 0 0;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+  .topbar{
+    max-width:600px;
+    left:50%;
+    transform:translateX(-50%);
+    border-radius:0 0 16px 16px;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+  #page-login .login-wrap{max-width:420px}
+}
+
+
+/* ═══ LOGIN REDESIGN PREMIUM ═══ */
+
+/* Background dynamique */
+.login-bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:radial-gradient(ellipse at 20% 50%,#0a1628 0%,#020817 60%)}
+.login-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+.login-orb-1{width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,0.25),transparent);top:-100px;right:-100px;animation:orbFloat 8s ease-in-out infinite}
+.login-orb-2{width:350px;height:350px;background:radial-gradient(circle,rgba(139,92,246,0.2),transparent);bottom:-50px;left:-80px;animation:orbFloat 10s ease-in-out infinite reverse}
+.login-orb-3{width:250px;height:250px;background:radial-gradient(circle,rgba(16,185,129,0.12),transparent);top:40%;left:30%;animation:orbFloat 12s ease-in-out infinite 2s}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,-20px) scale(1.05)}66%{transform:translate(-15px,15px) scale(0.95)}}
+.login-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.04) 1px,transparent 1px);background-size:40px 40px;animation:gridMove 20s linear infinite}
+@keyframes gridMove{0%{background-position:0 0}100%{background-position:40px 40px}}
+
+/* Login wrap */
+.login-wrap{position:relative;z-index:1;width:100%;max-width:420px;margin:0 auto;padding:24px 20px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;gap:16px}
+
+/* Logo redesign */
+.logo-wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.logo-ring-wrap{position:relative;width:90px;height:90px}
+.logo-ring-outer{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;background:linear-gradient(135deg,rgba(59,130,246,0.8),rgba(139,92,246,0.6),rgba(16,185,129,0.4)) border-box;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:destination-out;mask-composite:exclude;animation:spinRing 6s linear infinite}
+.logo-ring-inner{position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(96,165,250,0.3);animation:spinRing 10s linear infinite reverse}
+.logo-inner{position:absolute;inset:14px;background:linear-gradient(145deg,#0f2a4a,#1a3a6a);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(59,130,246,0.4),inset 0 1px 0 rgba(255,255,255,0.1)}
+.logo-texts{text-align:center}
+.logo-name{font-size:28px;font-weight:900;letter-spacing:7px;background:linear-gradient(135deg,#93c5fd,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-transform:uppercase;line-height:1.1}
+.logo-sub{font-size:10px;letter-spacing:4px;color:var(--text3);margin-top:4px;text-transform:uppercase;font-weight:500}
+.logo-tagline{font-size:13px;color:var(--text2);margin-top:8px;font-style:italic;font-weight:300}
+
+/* Stats bar */
+.login-stats{display:flex;align-items:center;justify-content:center;gap:0;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r2);padding:12px 20px;backdrop-filter:blur(10px)}
+.login-stat{text-align:center;padding:0 20px}
+.login-stat-num{font-size:20px;font-weight:800;color:var(--accent2);font-family:var(--mono);line-height:1}
+.login-stat-lbl{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.1em;font-weight:600}
+.login-stat-div{width:1px;height:32px;background:var(--border)}
+
+/* Login card premium */
+.login-card{background:linear-gradient(145deg,rgba(10,22,40,0.9),rgba(5,13,31,0.95));border:1px solid rgba(56,139,253,0.2);border-radius:24px;padding:28px;backdrop-filter:blur(30px);box-shadow:0 0 0 1px rgba(59,130,246,0.05),0 20px 60px rgba(0,0,0,0.6),0 0 80px rgba(59,130,246,0.06);position:relative;overflow:hidden}
+.login-card-glow{position:absolute;top:-50%;right:-30%;width:200px;height:200px;background:radial-gradient(circle,rgba(59,130,246,0.08),transparent);pointer-events:none}
+.login-card-header{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.login-card-icon{font-size:28px;width:48px;height:48px;background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(139,92,246,0.1));border:1px solid rgba(59,130,246,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center}
+.login-title{font-size:20px;font-weight:800;letter-spacing:-0.3px}
+.login-sub{font-size:12px;color:var(--text2);margin-top:3px}
+
+/* Input avec icône */
+.inp-wrap{position:relative;margin-bottom:16px}
+.inp-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;z-index:1;pointer-events:none}
+.inp-wrap .form-input{padding-left:42px!important;margin-bottom:0}
+.pass-wrap .form-input{padding-right:48px!important}
+
+/* Login button animé */
+.btn-login{width:100%;padding:15px 20px;border:none;border-radius:var(--r2);font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);background:linear-gradient(135deg,#1e40af,#3b82f6,#6366f1);color:#fff;position:relative;overflow:hidden;transition:all 0.3s ease;box-shadow:0 4px 25px rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:0}
+.btn-login::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);transition:left 0.5s ease}
+.btn-login:hover::before{left:100%}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 35px rgba(59,130,246,0.55)}
+.btn-login:active{transform:translateY(0) scale(0.98)}
+.btn-login-text{flex:1;text-align:center}
+.btn-login-icon{font-size:18px;transition:transform 0.2s ease}
+.btn-login:hover .btn-login-icon{transform:translateX(4px)}
+
+/* Register button */
+.login-divider{display:flex;align-items:center;gap:12px;margin:14px 0;color:var(--text3);font-size:11px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+.btn-register{display:flex;align-items:center;justify-content:center;width:100%;padding:13px;border:1px solid rgba(99,179,255,0.2);border-radius:var(--r2);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);text-align:center;text-decoration:none;color:var(--accent2);background:rgba(59,130,246,0.04);transition:all 0.25s ease}
+.btn-register:hover{background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.4);transform:translateY(-1px)}
+
+.login-footer{text-align:center;color:var(--text3);font-size:11px;padding-bottom:10px}
+
 </style>
 
 </head>
@@ -555,37 +691,73 @@ textarea.inp{resize:vertical;min-height:80px}
 
 <!-- LOGIN -->
 <div class="page active" id="page-login">
-  <div class="login-glow"></div>
+  <div class="login-bg">
+    <div class="login-orb login-orb-1"></div>
+    <div class="login-orb login-orb-2"></div>
+    <div class="login-orb login-orb-3"></div>
+    <div class="login-grid"></div>
+  </div>
   <div class="login-wrap">
+    <!-- Logo animé -->
     <div class="logo-wrap fade-up">
       <div class="logo-ring-wrap">
-        <div class="logo-ring"></div>
-        <div class="logo-ring2"></div>
+        <div class="logo-ring-outer"></div>
+        <div class="logo-ring-inner"></div>
         <div class="logo-inner">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12.55a11 11 0 0 1 14.08 0" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-            <path d="M1.42 9a16 16 0 0 1 21.16 0" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="12" cy="20" r="1.8" fill="#60a5fa"/>
-          </svg>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1.8" fill="#60a5fa"/></svg>
         </div>
       </div>
-      <div class="logo-name">NTY STARNET</div>
-      <div class="logo-sub">WiFi Manager Pro</div>
-      <div class="logo-tagline">Votre connexion, notre priorité ✨</div>
+      <div class="logo-texts">
+        <div class="logo-name">NTY STARNET</div>
+        <div class="logo-sub">WIFI MANAGER PRO</div>
+        <div class="logo-tagline">Votre connexion, notre priorité ✨</div>
+      </div>
     </div>
-    <div class="login-card fade-up">
-      <div class="login-title">Connexion</div>
-      <div class="login-sub">Accédez à votre espace personnel</div>
+
+    <!-- Stats animées -->
+    <div class="login-stats fade-up" style="animation-delay:0.1s">
+      <div class="login-stat">
+        <div class="login-stat-num">34+</div>
+        <div class="login-stat-lbl">Clients</div>
+      </div>
+      <div class="login-stat-div"></div>
+      <div class="login-stat">
+        <div class="login-stat-num">2</div>
+        <div class="login-stat-lbl">Zones</div>
+      </div>
+      <div class="login-stat-div"></div>
+      <div class="login-stat">
+        <div class="login-stat-num">24/7</div>
+        <div class="login-stat-lbl">Support</div>
+      </div>
+    </div>
+
+    <!-- Card connexion -->
+    <div class="login-card fade-up" style="animation-delay:0.2s">
+      <div class="login-card-glow"></div>
+      <div class="login-card-header">
+        <div class="login-card-icon">🔐</div>
+        <div>
+          <div class="login-title">Connexion</div>
+          <div class="login-sub">Accédez à votre espace personnel</div>
+        </div>
+      </div>
       <label class="form-label">Nom d'utilisateur</label>
-      <input class="form-input" type="text" id="login-user" placeholder="Entrez votre username" autocomplete="username">
+      <div class="inp-wrap">
+        <span class="inp-icon">👤</span>
+        <input class="form-input" type="text" id="login-user" placeholder="Entrez votre username" autocomplete="username">
+      </div>
       <label class="form-label">Mot de passe</label>
-      <div class="pass-wrap">
+      <div class="pass-wrap inp-wrap">
+        <span class="inp-icon">🔑</span>
         <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
         <button class="eye-btn" onclick="togglePass()">👁</button>
       </div>
       <div class="login-err" id="login-err">⚠️ <span class="err-msg">Identifiants incorrects</span></div>
-      <button class="btn-login" onclick="doLogin()" id="login-btn">Se connecter <span>→</span></button>
+      <button class="btn-login" onclick="doLogin()" id="login-btn">
+        <span class="btn-login-text">Se connecter</span>
+        <span class="btn-login-icon">→</span>
+      </button>
       <div class="login-divider"><span>ou</span></div>
       <a href="/inscription.html" class="btn-register">S'inscrire</a>
     </div>
