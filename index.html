@@ -53,14 +53,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .ambient-glow-2{width:400px;height:400px;background:#8b5cf6;bottom:-100px;left:-100px}
 
 /* ═══ PAGES ═══ */
-.page{display:none;position:relative;z-index:1;min-height:100vh}
-.page.active{display:block}
+.page{display:none!important;position:relative;z-index:1;min-height:100vh}
+.page.active{display:block!important}
+#page-login.active{display:flex!important}
+#page-admin.active{display:block!important}
+#page-client.active{display:block!important}
 
 /* ═══════════════════════════════
    LOGIN PAGE
 ═══════════════════════════════ */
-#page-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-#page-login.active{display:flex}
+#page-login{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+#page-login.active{display:flex!important}
 .login-glow{position:fixed;width:500px;height:500px;background:radial-gradient(ellipse,rgba(59,130,246,0.2),transparent);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0}
 .login-wrap{width:100%;max-width:400px;position:relative;z-index:1}
 
