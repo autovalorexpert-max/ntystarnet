@@ -81,12 +81,7 @@
       <label class="inp-label">Numero de telephone <span class="required">*</span></label>
       <input class="inp" type="tel" id="f-phone" placeholder="Ex: 034 XX XXX XX">
 
-      <label class="inp-label">Zone souhaitee <span class="required">*</span></label>
-      <select class="inp" id="f-zone">
-        <option value="">-- Choisir une zone --</option>
-        <option value="Ampasapito">Ampasapito</option>
-        <option value="Anjanahary">Anjanahary</option>
-      </select>
+      <input type="hidden" id="f-zone" value="">
 
       <label class="inp-label">Quartier / Repere <span class="required">*</span></label>
       <input class="inp" type="text" id="f-address" placeholder="Ex: Pres de l eglise Ampasapito, derriere le marche...">
@@ -158,7 +153,7 @@ async function submitInscription(){
 
   if(!name){toast('Entrez votre nom complet','error');return;}
   if(!phone){toast('Entrez votre numero de telephone','error');return;}
-  if(!zone){toast('Choisissez une zone','error');return;}
+
   if(!address){toast('Entrez votre adresse exacte','error');return;}
 
   const btn=document.querySelector('.btn-primary');
