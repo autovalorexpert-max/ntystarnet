@@ -589,33 +589,7 @@ textarea.inp{resize:vertical;min-height:80px}
 /* Bottom nav hauteur fixe */
 .bottom-nav{height:64px;min-height:64px}
 
-/* Responsive PC */
-@media(min-width:600px){
-  #page-client .app-wrap,
-  #page-admin .app-wrap{
-    max-width:600px;
-    margin:0 auto;
-    padding-left:20px;
-    padding-right:20px;
-  }
-  .bottom-nav{
-    max-width:600px;
-    left:50%;
-    transform:translateX(-50%);
-    border-radius:20px 20px 0 0;
-    border-left:1px solid var(--border);
-    border-right:1px solid var(--border);
-  }
-  .topbar{
-    max-width:600px;
-    left:50%;
-    transform:translateX(-50%);
-    border-radius:0 0 16px 16px;
-    border-left:1px solid var(--border);
-    border-right:1px solid var(--border);
-  }
-  #page-login .login-wrap{max-width:420px}
-}
+
 
 
 /* ═══ LOGIN REDESIGN PREMIUM ═══ */
@@ -1007,6 +981,80 @@ textarea.inp{resize:vertical;min-height:80px}
   box-shadow:0 4px 20px rgba(0,0,0,0.15);
 }
 .section-head{font-size:13px;font-weight:800;margin-bottom:14px;color:var(--text);letter-spacing:0.02em}
+
+
+/* ═══ RESPONSIVE PC — LAYOUT CORRECT ═══ */
+@media(min-width:768px){
+
+  /* Centrer le contenu sur PC comme une app mobile */
+  #page-client,#page-admin{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background:var(--bg);
+  }
+
+  /* Topbar centrée */
+  .topbar{
+    width:100%;max-width:520px;
+    left:50%;transform:translateX(-50%);
+    border-radius:0 0 20px 20px;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+
+  /* Contenu centré */
+  .app-wrap{
+    width:100%;max-width:520px;
+    padding-top:76px;
+    padding-bottom:90px;
+    padding-left:20px;
+    padding-right:20px;
+  }
+
+  /* Nav en bas centrée */
+  .bottom-nav{
+    width:100%;max-width:520px;
+    left:50%;transform:translateX(-50%);
+    border-radius:20px 20px 0 0;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+    bottom:0;
+  }
+
+  /* Fond sombre derrière */
+  #page-client::before,#page-admin::before{
+    content:'';
+    position:fixed;inset:0;
+    background:rgba(1,4,12,0.95);
+    z-index:0;
+  }
+
+  #page-client>*,#page-admin>*{
+    position:relative;z-index:1;
+  }
+}
+
+/* Mobile — full width */
+@media(max-width:767px){
+  .app-wrap{
+    padding-top:68px;
+    padding-bottom:80px;
+    padding-left:14px;
+    padding-right:14px;
+  }
+  .bottom-nav{
+    left:0;right:0;
+    transform:none;
+    border-radius:0;
+  }
+  .topbar{
+    left:0;right:0;
+    transform:none;
+    border-radius:0;
+  }
+}
 
 </style>
 
