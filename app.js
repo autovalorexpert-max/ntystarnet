@@ -595,12 +595,19 @@ async function renderAdminPaiements(filter='pending'){
         if(!isProrata)html+=(next?'<div class="ticket-preview">🎫 Prochain ticket: <strong>'+next.code+'</strong></div>':'<div class="ticket-preview" style="color:var(--danger)">⚠️ Aucun ticket disponible</div>');
         if(isProrata)html+='<div class="ticket-preview">📅 Nouvelle date: le <strong>'+p.prorata_new_day+'</strong> de chaque mois · Valable jusqu au <strong>'+fmtDate(p.prorata_next_date)+'</strong></div>';
         html+='<div class="pay-card-btns"><button class="btn btn-success" style="flex:2;padding:10px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div>';
+      }else{
+        html+='<button class="btn" style="margin-top:8px;padding:8px;font-size:12px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deletePayment(\''+p.id+'\',\''+filter+'\')">🗑 Supprimer</button>';
       }
       if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:12px&quot;>\')">📷 Voir la preuve</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+}
+async function deletePayment(id,filter){
+  if(!confirm('Supprimer ce paiement ? Irreversible.'))return;
+  try{await sbDelete('payments','id=eq.'+id);toast('Paiement supprime');renderAdminPaiements(filter);}
+  catch(e){toast('Erreur','error');}
 }
 
 // VALIDATE
@@ -906,6 +913,7 @@ async function renderAdminInscriptions(){
       html+='<div class="inscr-card '+(isPending?'inscr-pending':'inscr-done')+'">';
       html+='<div class="inscr-top"><div><div class="inscr-name">'+ins.name+'</div><div class="inscr-meta">📞 '+(ins.phone||'—')+' · 📍 '+(ins.zone||'—')+'</div>'+(ins.address?'<div class="inscr-meta">🏠 '+ins.address+'</div>':'')+(ins.message?'<div class="inscr-msg">💬 '+ins.message+'</div>':'')+'</div><div style="text-align:right"><span class="badge badge-'+(isPending?'pending':'active')+'">'+(isPending?'⏳ En attente':'✅ Traite')+'</span><div class="inscr-date">'+fmtDate(ins.created_at)+'</div></div></div>';
       if(isPending)html+='<div class="inscr-btns"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:12px" onclick="acceptInscription(\''+ins.id+'\',\''+ins.name+'\',\''+(ins.phone||'')+'\',\''+(ins.zone||'')+'\')">✓ Accepter et creer le compte</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:12px" onclick="rejectInscription(\''+ins.id+'\')">✗ Refuser</button></div>';
+      else html+='<button class="btn" style="margin-top:8px;padding:8px;font-size:12px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteInscription(\''+ins.id+'\')">🗑 Supprimer</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
@@ -955,6 +963,11 @@ async function createFromInscription(inscriptionId){
 async function rejectInscription(id){
   if(!confirm('Refuser cette inscription ?'))return;
   try{await sbPatch('inscriptions','id=eq.'+id,{status:'rejected'});toast('Inscription refusee');renderAdminInscriptions();}
+  catch(e){toast('Erreur','error');}
+}
+async function deleteInscription(id){
+  if(!confirm('Supprimer cette inscription ? Irreversible.'))return;
+  try{await sbDelete('inscriptions','id=eq.'+id);toast('Inscription supprimee');renderAdminInscriptions();}
   catch(e){toast('Erreur','error');}
 }
 
