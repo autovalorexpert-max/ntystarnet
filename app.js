@@ -597,6 +597,7 @@ async function renderAdminPaiements(filter='pending'){
         html+='<div class="pay-card-btns"><button class="btn btn-success" style="flex:2;padding:10px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div>';
       }
       if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:12px&quot;>\')">📷 Voir la preuve</button>';
+      if(p.status!=='pending')html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deletePayment(\''+p.id+'\')">🗑 Supprimer</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
