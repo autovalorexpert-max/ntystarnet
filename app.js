@@ -654,6 +654,15 @@ async function validateProrata(payId,clientId,newDay,nextDate){
   }catch(e){toast('Erreur validation prorata','error');}
 }
 
+async function deletePayment(id){
+  if(!confirm('Supprimer ce paiement de l historique ? Cette action est irreversible.'))return;
+  try{
+    await sbDelete('payments','id=eq.'+id);
+    toast('✅ Paiement supprimé !');
+    renderAdminPaiements(document.querySelector('.ftab.active')?.textContent==='En attente'?'pending':document.querySelector('.ftab.active')?.textContent==='Validés'?'validated':'');
+  }catch(e){toast('Erreur suppression','error');}
+}
+
 function rejectConfirm(){showModal('<div class="modal-title">❌ Refuser <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Motif (optionnel)</label><input class="inp" type="text" id="reject-reason" placeholder="Ex: Reference incorrecte"><button class="btn btn-danger btn-full" onclick="doReject()">✗ Confirmer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');}
 async function doReject(){
   const reason=document.getElementById('reject-reason')?.value||'';
@@ -969,9 +978,15 @@ async function exportClientsExcel(){
 </tr>`;
       planIndex++;
     }
+    // Calculer aussi le total tous clients (actifs + expirés)
+    const totalRevenueAll=clients.reduce((s,c)=>s+(parseInt((c.plan_price||'0').replace('.',''))||0),0);
     html+=`<tr style="background:#0d9b6e">
-  <td colspan="7" style="padding:11px 16px;color:#fff;font-weight:800;font-size:11pt;border:1px solid #0a7a56">💰 TOTAL REVENUS MENSUELS (clients actifs)</td>
-  <td colspan="3" style="padding:11px 16px;color:#fff;font-weight:800;font-size:13pt;text-align:right;font-family:Courier New,monospace;border:1px solid #0a7a56">${totalRevenue.toLocaleString('fr')} Ar</td>
+  <td colspan="7" style="padding:10px 16px;color:#fff;font-weight:800;font-size:11pt;border:1px solid #0a7a56">💰 TOTAL MENSUEL — Clients actifs seulement</td>
+  <td colspan="3" style="padding:10px 16px;color:#fff;font-weight:800;font-size:13pt;text-align:right;font-family:Courier New,monospace;border:1px solid #0a7a56">${totalRevenue.toLocaleString('fr')} Ar</td>
+</tr>
+<tr style="background:#1a5c3e">
+  <td colspan="7" style="padding:10px 16px;color:#a7f3d0;font-weight:800;font-size:11pt;border:1px solid #0a7a56">📊 TOTAL MENSUEL — Si tous les clients renouvellent</td>
+  <td colspan="3" style="padding:10px 16px;color:#a7f3d0;font-weight:800;font-size:13pt;text-align:right;font-family:Courier New,monospace;border:1px solid #0a7a56">${totalRevenueAll.toLocaleString('fr')} Ar</td>
 </tr>
 <tr><td colspan="10" style="padding:8px;background:#f8fafc"></td></tr>`;
 
@@ -1184,6 +1199,7 @@ async function exportClientsPDF(){
       }
     });
     const totalRev=clients.filter(c=>c.status==='active').reduce((s,c)=>s+(parseInt((c.plan_price||'0').replace(/\./g,''))||0),0);
+    const totalRevAll=clients.reduce((s,c)=>s+(parseInt((c.plan_price||'0').replace(/\./g,''))||0),0);
 
     win.document.write(`
   <div class="zone-section" style="margin-bottom:20px">
@@ -1230,6 +1246,14 @@ async function exportClientsPDF(){
           </td>
           <td style="padding:13px 14px;text-align:right;font-weight:800;font-size:16px;color:#059669;font-family:'JetBrains Mono',monospace">
             ${totalRev.toLocaleString('fr')} Ar
+          </td>
+        </tr>
+        <tr style="background:#ecfdf5;border-top:1px dashed #10b981">
+          <td colspan="5" style="padding:11px 14px;font-weight:700;font-size:13px;color:#065f46">
+            📊 TOTAL si tous les clients renouvellent (actifs + expirés)
+          </td>
+          <td style="padding:11px 14px;text-align:right;font-weight:800;font-size:14px;color:#047857;font-family:'JetBrains Mono',monospace">
+            ${totalRevAll.toLocaleString('fr')} Ar
           </td>
         </tr>
       </tbody>
