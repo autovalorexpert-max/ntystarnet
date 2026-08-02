@@ -841,6 +841,7 @@ async function renderAdminStats(){
     html+='</div>';
     if(Object.keys(planCount).length>0){html+='<div class="section-card"><div class="section-head">Par plan</div>';Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});html+='</div>';}
     html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
+    html+='<div class="section-card"><div class="section-head">🗑️ Cache & Stockage</div><button class="btn btn-ghost btn-full" onclick="showCacheManager()">Gérer le cache de l application</button></div>';
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
 }
@@ -1339,6 +1340,72 @@ async function rejectInscription(id){
   if(!confirm('Refuser cette inscription ?'))return;
   try{await sbPatch('inscriptions','id=eq.'+id,{status:'rejected'});toast('Inscription refusee');renderAdminInscriptions();}
   catch(e){toast('Erreur','error');}
+}
+
+async function deleteInscription(id){
+  if(!confirm('Supprimer cette inscription definitivement ?'))return;
+  try{await sbDelete('inscriptions','id=eq.'+id);toast('✅ Inscription supprimee !');renderAdminInscriptions();}
+  catch(e){toast('Erreur suppression','error');}
+}
+
+// ═══ NETTOYAGE DU CACHE ═══
+async function showCacheManager(){
+  // Calculer la taille du localStorage
+  let totalSize=0;
+  const items=[];
+  for(let key in localStorage){
+    if(localStorage.hasOwnProperty(key)){
+      const size=((localStorage[key].length+key.length)*2);
+      totalSize+=size;
+      items.push({key,size,label:getCacheLabel(key)});
+    }
+  }
+  items.sort((a,b)=>b.size-a.size);
+  const totalKB=(totalSize/1024).toFixed(1);
+
+  let html='<div class="modal-title">🗑️ Gestionnaire du cache <button class="modal-close" onclick="closeModal()">×</button></div>';
+  html+='<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:var(--r);padding:12px;margin-bottom:14px;text-align:center">';
+  html+='<div style="font-size:22px;font-weight:800;color:var(--accent2)">'+totalKB+' KB</div>';
+  html+='<div style="font-size:12px;color:var(--text2);margin-top:2px">Utilisés sur votre appareil (max ~5MB)</div></div>';
+  html+='<div style="margin-bottom:12px">';
+  items.forEach(item=>{
+    if(item.size>100){
+      const kb=(item.size/1024).toFixed(1);
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">';
+      html+='<div><div style="font-weight:600">'+item.label+'</div><div style="color:var(--text3);font-size:10px">'+item.key+'</div></div>';
+      html+='<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3);font-family:var(--mono)">'+kb+' KB</span>';
+      html+='<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3);font-family:var(--mono)">'+kb+' KB</span><button class="btn btn-danger" style="padding:4px 10px;font-size:11px;margin:0;width:auto" onclick="clearCacheItem(\''+item.key+'\')">✕</button></div></div>';
+    }
+  });
+  html+='</div>';
+  html+='<button class="btn btn-danger btn-full" onclick="clearAllCache()">🗑️ Tout effacer</button>';
+  html+='<button class="btn btn-ghost btn-full" onclick="closeModal()">Fermer</button>';
+  showModal(html);
+}
+
+function getCacheLabel(key){
+  if(key.startsWith('nty_bot_msgs_'))return '🤖 Messages bot client';
+  if(key==='nty_coupure')return '⚡ État coupure';
+  if(key==='nty_coupure_zones')return '⚡ Coupures par zone';
+  if(key.startsWith('nty_coupure_msg'))return '⚡ Message coupure';
+  if(key==='nty_coupure_msg')return '⚡ Message coupure global';
+  return '📦 Données app';
+}
+
+function clearCacheItem(key){
+  localStorage.removeItem(key);
+  toast('✅ Supprimé !');
+  showCacheManager();
+}
+
+function clearAllCache(){
+  if(!confirm('Effacer TOUT le cache ? Les préférences et messages du bot seront perdus.'))return;
+  // Garder uniquement les données essentielles
+  const keep=['nty_coupure','nty_coupure_zones'];
+  const keys=Object.keys(localStorage).filter(k=>!keep.includes(k));
+  keys.forEach(k=>localStorage.removeItem(k));
+  toast('✅ Cache nettoyé ! ('+(keys.length)+' éléments supprimés)');
+  closeModal();
 }
 
 // CONFETTIS & EASTER EGG
