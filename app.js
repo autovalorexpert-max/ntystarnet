@@ -595,19 +595,12 @@ async function renderAdminPaiements(filter='pending'){
         if(!isProrata)html+=(next?'<div class="ticket-preview">🎫 Prochain ticket: <strong>'+next.code+'</strong></div>':'<div class="ticket-preview" style="color:var(--danger)">⚠️ Aucun ticket disponible</div>');
         if(isProrata)html+='<div class="ticket-preview">📅 Nouvelle date: le <strong>'+p.prorata_new_day+'</strong> de chaque mois · Valable jusqu au <strong>'+fmtDate(p.prorata_next_date)+'</strong></div>';
         html+='<div class="pay-card-btns"><button class="btn btn-success" style="flex:2;padding:10px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div>';
-      }else{
-        html+='<button class="btn" style="margin-top:8px;padding:8px;font-size:12px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deletePayment(\''+p.id+'\',\''+filter+'\')">🗑 Supprimer</button>';
       }
       if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:12px&quot;>\')">📷 Voir la preuve</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
-}
-async function deletePayment(id,filter){
-  if(!confirm('Supprimer ce paiement ? Irreversible.'))return;
-  try{await sbDelete('payments','id=eq.'+id);toast('Paiement supprime');renderAdminPaiements(filter);}
-  catch(e){toast('Erreur','error');}
 }
 
 // VALIDATE
@@ -842,61 +835,419 @@ async function renderAdminStats(){
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
 }
 
-// ═══ EXPORT EXCEL ═══
+// ═══ EXPORT EXCEL PROFESSIONNEL ═══
 async function exportClientsExcel(){
   try{
-    const clients=await sbGet('clients','order=zone.asc,name.asc');
-    const headers=['Nom','Username','Zone','Plan','Prix','Statut','IP','Debut','Fin','Tel'];
-    const rows=clients.map(function(c){return[
-      c.name||'',c.username||'',c.zone||'',c.plan||'',(c.plan_price||'')+'Ar',
-      c.status==='active'?'Actif':c.status==='expired'?'Expire':'En attente',
-      c.ip_address||'',c.start_date||'',c.expiry_date||'',c.phone||''
-    ];});
-    const sep=',';
-    const nl=String.fromCharCode(13,10);
-    const esc=function(v){return'"'+String(v).replace(/"/g,'""')+'"';};
-    const csvLines=[headers.map(esc).join(sep)];
-    rows.forEach(function(r){csvLines.push(r.map(esc).join(sep));});
-    const csvContent='﻿'+csvLines.join(nl);
-    const blob=new Blob([csvContent],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download='NTY_Starnet_Clients_'+today()+'.csv';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast('✅ Export Excel telecharge ! ('+clients.length+' clients)');
-  }catch(e){toast('Erreur export','error');}
-}
-
-// ═══ EXPORT PDF ═══
-async function exportClientsPDF(){
-  try{
+    toast('📊 Génération du fichier Excel...');
     const clients=await sbGet('clients','order=zone.asc,name.asc');
     const ampClients=clients.filter(c=>c.zone==='Ampasapito');
     const anjClients=clients.filter(c=>c.zone==='Anjanahary');
     const actifs=clients.filter(c=>c.status==='active').length;
     const expires=clients.filter(c=>c.status==='expired').length;
     const pending=clients.filter(c=>c.status==='pending').length;
+
+    // Calculer les totaux par plan
+    const planStats={};
+    clients.forEach(c=>{if(c.plan){planStats[c.plan]=(planStats[c.plan]||{count:0,revenue:0});planStats[c.plan].count++;if(c.status==='active')planStats[c.plan].revenue+=(parseInt((c.plan_price||'0').replace('.',''))||0);}});
+    const totalRevenue=clients.filter(c=>c.status==='active').reduce((s,c)=>s+(parseInt((c.plan_price||'0').replace('.',''))||0),0);
+    const dateGen=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+    
+    let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>NTY Starnet</x:Name>
+<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+</head><body>
+<table border="0" cellpadding="6" cellspacing="0" style="font-family:Calibri,Arial,sans-serif;font-size:11pt;border-collapse:collapse;width:100%">
+
+<!-- HEADER TITRE -->
+<tr>
+  <td colspan="10" style="background:#1e3a5f;color:#ffffff;font-size:18pt;font-weight:bold;padding:16px 20px;letter-spacing:2px">
+    📶 &nbsp; NTY STARNET
+  </td>
+</tr>
+<tr>
+  <td colspan="10" style="background:#2d5a8e;color:#b8d4f0;font-size:10pt;padding:8px 20px;letter-spacing:1px">
+    RAPPORT DES CLIENTS — Généré le ${dateGen}
+  </td>
+</tr>
+
+<!-- LIGNE VIDE -->
+<tr><td colspan="10" style="padding:4px;background:#f8fafc"></td></tr>
+
+<!-- STATISTIQUES -->
+<tr>
+  <td colspan="2" style="background:#0d9b6e;color:#fff;font-weight:bold;font-size:13pt;padding:12px 16px;text-align:center;border-radius:4px">
+    👥 ${clients.length}<br><span style="font-size:9pt;font-weight:normal;opacity:0.9">Total clients</span>
+  </td>
+  <td style="background:#f8fafc;padding:6px"></td>
+  <td colspan="2" style="background:#0d9b6e;color:#fff;font-weight:bold;font-size:13pt;padding:12px 16px;text-align:center">
+    ✅ ${actifs}<br><span style="font-size:9pt;font-weight:normal;opacity:0.9">Actifs</span>
+  </td>
+  <td style="background:#f8fafc;padding:6px"></td>
+  <td colspan="2" style="background:#e05c2a;color:#fff;font-weight:bold;font-size:13pt;padding:12px 16px;text-align:center">
+    ❌ ${expires}<br><span style="font-size:9pt;font-weight:normal;opacity:0.9">Expirés</span>
+  </td>
+  <td style="background:#f8fafc;padding:6px"></td>
+  <td style="background:#c4922a;color:#fff;font-weight:bold;font-size:13pt;padding:12px 16px;text-align:center">
+    ⏳ ${pending}<br><span style="font-size:9pt;font-weight:normal;opacity:0.9">En attente</span>
+  </td>
+</tr>
+
+<tr><td colspan="10" style="padding:8px;background:#f8fafc"></td></tr>`;
+
+    // Fonction pour générer tableau par zone
+    function zoneTable(zoneName,list){
+      if(!list.length)return'';
+      let t=`
+<!-- ZONE ${zoneName.toUpperCase()} -->
+<tr>
+  <td colspan="10" style="background:#1e3a5f;color:#60a5fa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #3b82f6">
+    📍 ${zoneName} &nbsp;·&nbsp; ${list.length} client(s)
+  </td>
+</tr>
+<!-- EN-TÊTES -->
+<tr style="background:#2d5a8e">
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #3d6fa0">#</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #3d6fa0">NOM COMPLET</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #3d6fa0">USERNAME</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #3d6fa0">PLAN</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:right;font-size:10pt;border:1px solid #3d6fa0">PRIX/MOIS</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:center;font-size:10pt;border:1px solid #3d6fa0">STATUT</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #3d6fa0">ADRESSE IP</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:center;font-size:10pt;border:1px solid #3d6fa0">DÉBUT</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:center;font-size:10pt;border:1px solid #3d6fa0">FIN</th>
+  <th style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #3d6fa0">TÉLÉPHONE</th>
+</tr>`;
+      list.forEach(function(c,i){
+        const even=i%2===0;
+        const bg=even?'#f0f7ff':'#ffffff';
+        const status=c.status==='active'?'✅ Actif':c.status==='expired'?'❌ Expiré':'⏳ En attente';
+        const statusColor=c.status==='active'?'#065f46':c.status==='expired'?'#7f1d1d':'#78350f';
+        const statusBg=c.status==='active'?'#d1fae5':c.status==='expired'?'#fee2e2':'#fef3c7';
+        const fmtD=function(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});};
+        t+=`<tr style="background:${bg}">
+  <td style="padding:9px 12px;color:#64748b;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600">${i+1}</td>
+  <td style="padding:9px 12px;font-weight:700;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b">${c.name||'—'}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#3b82f6;font-family:Courier New,monospace">@${c.username||'—'}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b;font-weight:500">${c.plan||'—'}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f766e;font-family:Courier New,monospace">${(c.plan_price||'—')} Ar</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;background:${statusBg};color:${statusColor};font-weight:700">${status}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;font-family:Courier New,monospace;color:#475569">${c.ip_address||'—'}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;color:#475569">${fmtD(c.start_date)}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;color:#475569">${fmtD(c.expiry_date)}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;font-family:Courier New,monospace;color:#475569">${c.phone||'—'}</td>
+</tr>`;
+      });
+      t+='<tr><td colspan="10" style="padding:8px;background:#f8fafc"></td></tr>';
+      return t;
+    }
+
+    // Tableau récapitulatif des abonnements
+    html+=`
+<tr>
+  <td colspan="10" style="background:#0f2a4a;color:#60a5fa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #10b981">
+    📊 RÉCAPITULATIF DES ABONNEMENTS
+  </td>
+</tr>
+<tr style="background:#1a3a5c">
+  <th colspan="3" style="color:#fff;font-weight:bold;padding:10px 12px;text-align:left;font-size:10pt;border:1px solid #2d5a8e">FORFAIT</th>
+  <th colspan="2" style="color:#fff;font-weight:bold;padding:10px 12px;text-align:center;font-size:10pt;border:1px solid #2d5a8e">NB CLIENTS</th>
+  <th colspan="2" style="color:#fff;font-weight:bold;padding:10px 12px;text-align:center;font-size:10pt;border:1px solid #2d5a8e">CLIENTS ACTIFS</th>
+  <th colspan="3" style="color:#fff;font-weight:bold;padding:10px 12px;text-align:right;font-size:10pt;border:1px solid #2d5a8e">REVENU MENSUEL ACTIF</th>
+</tr>`;
+    let planIndex=0;
+    for(const [plan,data] of Object.entries(planStats)){
+      const bg=planIndex%2===0?'#f0f7ff':'#ffffff';
+      const activeCount=clients.filter(c=>c.plan===plan&&c.status==='active').length;
+      html+=`<tr style="background:${bg}">
+  <td colspan="3" style="padding:9px 12px;font-weight:700;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b">${plan}</td>
+  <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#3b82f6">${data.count} client(s)</td>
+  <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#10b981">${activeCount} actif(s)</td>
+  <td colspan="3" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f766e;font-family:Courier New,monospace">${data.revenue.toLocaleString('fr')} Ar</td>
+</tr>`;
+      planIndex++;
+    }
+    html+=`<tr style="background:#0d9b6e">
+  <td colspan="7" style="padding:11px 16px;color:#fff;font-weight:800;font-size:11pt;border:1px solid #0a7a56">💰 TOTAL REVENUS MENSUELS (clients actifs)</td>
+  <td colspan="3" style="padding:11px 16px;color:#fff;font-weight:800;font-size:13pt;text-align:right;font-family:Courier New,monospace;border:1px solid #0a7a56">${totalRevenue.toLocaleString('fr')} Ar</td>
+</tr>
+<tr><td colspan="10" style="padding:8px;background:#f8fafc"></td></tr>`;
+
+    html+=zoneTable('Ampasapito',ampClients);
+    html+=zoneTable('Anjanahary',anjClients);
+
+    // Footer
+    html+=`<tr>
+  <td colspan="10" style="background:#1e3a5f;color:#64748b;font-size:9pt;padding:10px 16px;text-align:center">
+    NTY Starnet — Document confidentiel — ${clients.length} clients au total — ${dateGen}
+  </td>
+</tr>
+</table></body></html>`;
+
+    const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='NTY_Starnet_Clients_'+today()+'.xls';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('✅ Fichier Excel téléchargé ! ('+clients.length+' clients)');
+  }catch(e){console.error(e);toast('Erreur export Excel','error');}
+}
+
+// ═══ EXPORT PDF PROFESSIONNEL ═══
+async function exportClientsPDF(){
+  try{
+    toast('📄 Génération du PDF...');
+    const clients=await sbGet('clients','order=zone.asc,name.asc');
+    const ampClients=clients.filter(c=>c.zone==='Ampasapito');
+    const anjClients=clients.filter(c=>c.zone==='Anjanahary');
+    const actifs=clients.filter(c=>c.status==='active').length;
+    const expires=clients.filter(c=>c.status==='expired').length;
+    const pending=clients.filter(c=>c.status==='pending').length;
+    const dateGen=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+    const timeGen=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+
     const win=window.open('','_blank');
-    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>NTY Starnet - Liste Clients</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#1a1a2e}h1{color:#3b82f6;text-align:center;margin-bottom:4px}.subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:13px}.stats{display:flex;gap:12px;justify-content:center;margin-bottom:20px}.stat{background:#f0f4ff;border-radius:8px;padding:10px 20px;text-align:center}.stat-num{font-size:22px;font-weight:700;color:#3b82f6}.stat-lbl{font-size:11px;color:#666}.zone-title{background:#3b82f6;color:white;padding:8px 12px;border-radius:6px;margin:16px 0 8px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}th{background:#e8f0fe;padding:8px;text-align:left;border:1px solid #ddd;font-size:11px}td{padding:7px 8px;border:1px solid #eee}tr:nth-child(even){background:#f9faff}.badge-active{background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.badge-expired{background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.badge-pending{background:#fef9c3;color:#ca8a04;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.footer{text-align:center;color:#999;font-size:11px;margin-top:20px;border-top:1px solid #eee;padding-top:12px}@media print{.no-print{display:none}}</style></head><body>');
-    win.document.write('<div class="no-print" style="text-align:center;margin-bottom:16px"><button onclick="window.print()" style="background:#3b82f6;color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px">🖨️ Imprimer / Sauvegarder PDF</button></div>');
-    win.document.write('<h1>📶 NTY Starnet</h1><div class="subtitle">Liste clients — '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})+'</div>');
-    win.document.write('<div class="stats"><div class="stat"><div class="stat-num">'+clients.length+'</div><div class="stat-lbl">Total</div></div><div class="stat"><div class="stat-num" style="color:#16a34a">'+actifs+'</div><div class="stat-lbl">Actifs</div></div><div class="stat"><div class="stat-num" style="color:#dc2626">'+expires+'</div><div class="stat-lbl">Expires</div></div><div class="stat"><div class="stat-num" style="color:#ca8a04">'+pending+'</div><div class="stat-lbl">En attente</div></div></div>');
-    [['Ampasapito',ampClients],['Anjanahary',anjClients]].forEach(function(zd){
-      const zone=zd[0],list=zd[1];
+    win.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>NTY Starnet — Liste Clients</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .no-print{background:#3b82f6;color:white;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(59,130,246,0.4);transition:all .2s}
+  .no-print:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(59,130,246,0.5)}
+  .print-bar{text-align:center;padding:16px;background:white;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+  .print-bar p{font-size:12px;color:#64748b;margin-top:6px}
+  .page{max-width:1100px;margin:24px auto;padding:0 16px}
+
+  /* HEADER */
+  .header{background:linear-gradient(135deg,#0f172a,#1e3a5f,#0f172a);border-radius:16px;padding:32px 36px;margin-bottom:20px;position:relative;overflow:hidden}
+  .header::before{content:'';position:absolute;top:-60px;right:-60px;width:250px;height:250px;background:radial-gradient(circle,rgba(59,130,246,0.2),transparent);border-radius:50%}
+  .header::after{content:'';position:absolute;bottom:-40px;left:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(139,92,246,0.15),transparent);border-radius:50%}
+  .header-top{display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;z-index:1}
+  .header-logo{width:56px;height:56px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 25px rgba(59,130,246,0.4)}
+  .header-title{font-size:26px;font-weight:800;color:#fff;letter-spacing:2px}
+  .header-sub{font-size:12px;color:#93c5fd;letter-spacing:1px;margin-top:3px;text-transform:uppercase}
+  .header-meta{position:relative;z-index:1;display:flex;gap:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)}
+  .header-meta-item{font-size:12px;color:#94a3b8}
+  .header-meta-item span{color:#e2e8f0;font-weight:600;display:block;margin-top:2px}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .stat-card{background:white;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+  .stat-num{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:4px}
+  .stat-lbl{font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:0.05em}
+  .stat-total .stat-num{color:#3b82f6}
+  .stat-actif .stat-num{color:#10b981}
+  .stat-expire .stat-num{color:#ef4444}
+  .stat-attente .stat-num{color:#f59e0b}
+
+  /* ZONE SECTION */
+  .zone-section{background:white;border-radius:16px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);border:1px solid #e2e8f0}
+  .zone-header{padding:16px 24px;display:flex;align-items:center;gap:12px}
+  .zone-ampasapito .zone-header{background:linear-gradient(135deg,#0f2a4a,#1a3a5c)}
+  .zone-anjanahary .zone-header{background:linear-gradient(135deg,#1a0f4a,#2d1a5c)}
+  .zone-icon{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .zone-title{color:white;font-size:16px;font-weight:700}
+  .zone-count{color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse}
+  thead tr{background:#f8fafc;border-bottom:2px solid #e2e8f0}
+  th{padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap}
+  th.right{text-align:right}
+  th.center{text-align:center}
+  tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s}
+  tbody tr:hover{background:#f8fafc}
+  tbody tr:last-child{border-bottom:none}
+  td{padding:11px 14px;font-size:12px;color:#334155}
+  td.num{font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748b;font-weight:400}
+  td.name{font-weight:700;color:#0f172a;font-size:13px}
+  td.username{font-family:'JetBrains Mono',monospace;color:#3b82f6;font-size:11px}
+  td.plan{font-weight:600;color:#1e293b}
+  td.price{font-family:'JetBrains Mono',monospace;font-weight:700;color:#0d9488;text-align:right}
+  td.ip{font-family:'JetBrains Mono',monospace;color:#7c3aed;font-size:11px}
+  td.date{color:#64748b;font-size:11px;text-align:center}
+  td.phone{font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.03em}
+  .badge-active{background:#dcfce7;color:#15803d}
+  .badge-expired{background:#fee2e2;color:#b91c1c}
+  .badge-pending{background:#fef9c3;color:#a16207}
+  .row-even{background:#fafbff}
+
+  /* FOOTER */
+  .footer{text-align:center;padding:20px;color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;margin-top:4px}
+  .footer strong{color:#64748b}
+
+  @media print{
+    .no-print,.print-bar{display:none!important}
+    body{background:white}
+    .page{margin:0;padding:16px}
+    .zone-section{box-shadow:none;border:1px solid #e2e8f0}
+    .header{-webkit-print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="print-bar no-print-hide">
+  <button class="no-print" onclick="window.print()">🖨️ Imprimer / Sauvegarder en PDF</button>
+  <p>Appuyez sur "Imprimer" puis choisissez "Enregistrer en PDF" dans les options</p>
+</div>
+
+<div class="page">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-logo">📶</div>
+      <div>
+        <div class="header-title">NTY STARNET</div>
+        <div class="header-sub">Rapport officiel — Liste des clients</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="header-meta-item">Date de génération<span>${dateGen} à ${timeGen}</span></div>
+      <div class="header-meta-item">Total clients<span>${clients.length} clients</span></div>
+      <div class="header-meta-item">Zones couvertes<span>Ampasapito · Anjanahary</span></div>
+      <div class="header-meta-item">Document<span>Confidentiel</span></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card stat-total"><div class="stat-num">${clients.length}</div><div class="stat-lbl">Total clients</div></div>
+    <div class="stat-card stat-actif"><div class="stat-num">${actifs}</div><div class="stat-lbl">Actifs</div></div>
+    <div class="stat-card stat-expire"><div class="stat-num">${expires}</div><div class="stat-lbl">Expirés</div></div>
+    <div class="stat-card stat-attente"><div class="stat-num">${pending}</div><div class="stat-lbl">En attente</div></div>
+  </div>`);
+
+    function writeZoneTable(zoneName,list,zoneClass){
       if(!list.length)return;
-      win.document.write('<div class="zone-title">📍 '+zone+' — '+list.length+' client(s)</div><table><tr><th>#</th><th>Nom</th><th>Username</th><th>Plan</th><th>IP</th><th>Debut</th><th>Fin</th><th>Statut</th><th>Tel</th></tr>');
+      win.document.write(`
+  <div class="zone-section ${zoneClass}">
+    <div class="zone-header">
+      <div class="zone-icon">📍</div>
+      <div>
+        <div class="zone-title">${zoneName}</div>
+        <div class="zone-count">${list.length} client(s) dans cette zone</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px">#</th>
+          <th>Nom complet</th>
+          <th>Username</th>
+          <th>Plan</th>
+          <th class="right">Prix/mois</th>
+          <th class="center">Statut</th>
+          <th>Adresse IP</th>
+          <th class="center">Début</th>
+          <th class="center">Fin</th>
+          <th>Téléphone</th>
+        </tr>
+      </thead>
+      <tbody>`);
       list.forEach(function(c,i){
         const badge=c.status==='active'?'badge-active':c.status==='expired'?'badge-expired':'badge-pending';
-        const label=c.status==='active'?'Actif':c.status==='expired'?'Expire':'En attente';
-        win.document.write('<tr><td>'+(i+1)+'</td><td><strong>'+(c.name||'')+'</strong></td><td>'+(c.username||'')+'</td><td>'+(c.plan||'')+'<br><small>'+(c.plan_price||'')+'Ar</small></td><td style="font-family:monospace">'+(c.ip_address||'—')+'</td><td>'+(c.start_date?new Date(c.start_date).toLocaleDateString('fr-FR'):'—')+'</td><td>'+(c.expiry_date?new Date(c.expiry_date).toLocaleDateString('fr-FR'):'—')+'</td><td><span class="'+badge+'">'+label+'</span></td><td>'+(c.phone||'—')+'</td></tr>');
+        const label=c.status==='active'?'✅ Actif':c.status==='expired'?'❌ Expiré':'⏳ Attente';
+        const fmtD=function(d){if(!d)return'—';return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});};
+        const rowClass=i%2===0?'':'row-even';
+        win.document.write(`
+        <tr class="${rowClass}">
+          <td class="num" style="text-align:center">${i+1}</td>
+          <td class="name">${c.name||'—'}</td>
+          <td class="username">@${c.username||'—'}</td>
+          <td class="plan">${c.plan||'—'}</td>
+          <td class="price">${c.plan_price||'—'} Ar</td>
+          <td style="text-align:center"><span class="badge ${badge}">${label}</span></td>
+          <td class="ip">${c.ip_address||'—'}</td>
+          <td class="date">${fmtD(c.start_date)}</td>
+          <td class="date">${fmtD(c.expiry_date)}</td>
+          <td class="phone">${c.phone||'—'}</td>
+        </tr>`);
       });
-      win.document.write('</table>');
+      win.document.write('</tbody></table></div>');
+    }
+
+    // Section récapitulatif abonnements
+    const planStats={};
+    clients.forEach(function(c){
+      if(c.plan){
+        if(!planStats[c.plan])planStats[c.plan]={count:0,actifs:0,revenue:0};
+        planStats[c.plan].count++;
+        if(c.status==='active'){planStats[c.plan].actifs++;planStats[c.plan].revenue+=(parseInt((c.plan_price||'0').replace(/\./g,''))||0);}
+      }
     });
-    win.document.write('<div class="footer">NTY Starnet — Document confidentiel — '+clients.length+' clients</div></body></html>');
+    const totalRev=clients.filter(c=>c.status==='active').reduce((s,c)=>s+(parseInt((c.plan_price||'0').replace(/\./g,''))||0),0);
+
+    win.document.write(`
+  <div class="zone-section" style="margin-bottom:20px">
+    <div class="zone-header" style="background:linear-gradient(135deg,#064e3b,#065f46)">
+      <div class="zone-icon">📊</div>
+      <div>
+        <div class="zone-title">Récapitulatif des abonnements</div>
+        <div class="zone-count">Vue d ensemble des forfaits et revenus</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>FORFAIT</th>
+          <th class="center">TOTAL CLIENTS</th>
+          <th class="center">CLIENTS ACTIFS</th>
+          <th class="center">CLIENTS EXPIRÉS</th>
+          <th class="right">PRIX/MOIS</th>
+          <th class="right">REVENU MENSUEL</th>
+        </tr>
+      </thead>
+      <tbody>`);
+    let pidx=0;
+    Object.entries(planStats).forEach(function(entry){
+      const plan=entry[0],data=entry[1];
+      const expCount=clients.filter(c=>c.plan===plan&&c.status==='expired').length;
+      const price=clients.find(c=>c.plan===plan)?.plan_price||'—';
+      const rowClass=pidx%2===0?'':'row-even';
+      win.document.write(`
+        <tr class="${rowClass}">
+          <td class="plan" style="font-size:13px">${plan}</td>
+          <td style="text-align:center;font-weight:700;color:#3b82f6;font-family:'JetBrains Mono',monospace">${data.count}</td>
+          <td style="text-align:center"><span class="badge badge-active">${data.actifs} actif(s)</span></td>
+          <td style="text-align:center"><span class="badge badge-expired">${expCount} expiré(s)</span></td>
+          <td class="price">${price} Ar</td>
+          <td class="price" style="color:#0d9488;font-weight:800">${data.revenue.toLocaleString('fr')} Ar</td>
+        </tr>`);
+      pidx++;
+    });
+    win.document.write(`
+        <tr style="background:#f0fdf4;border-top:2px solid #10b981">
+          <td colspan="5" style="padding:13px 14px;font-weight:800;font-size:14px;color:#065f46">
+            💰 TOTAL REVENUS MENSUELS (clients actifs uniquement)
+          </td>
+          <td style="padding:13px 14px;text-align:right;font-weight:800;font-size:16px;color:#059669;font-family:'JetBrains Mono',monospace">
+            ${totalRev.toLocaleString('fr')} Ar
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`);
+
+    writeZoneTable('Ampasapito',ampClients,'zone-ampasapito');
+    writeZoneTable('Anjanahary',anjClients,'zone-anjanahary');
+
+    win.document.write(`
+  <div class="footer">
+    <strong>NTY Starnet</strong> — Document confidentiel — ${clients.length} clients — Généré le ${dateGen} à ${timeGen}
+  </div>
+</div>
+</body></html>`);
     win.document.close();
-    toast('✅ PDF pret a imprimer !');
-  }catch(e){toast('Erreur export PDF','error');}
+    toast('✅ PDF prêt ! Cliquez "Imprimer" pour sauvegarder.');
+  }catch(e){console.error(e);toast('Erreur export PDF','error');}
 }
 
 // ═══ INSCRIPTIONS ═══
@@ -913,7 +1264,6 @@ async function renderAdminInscriptions(){
       html+='<div class="inscr-card '+(isPending?'inscr-pending':'inscr-done')+'">';
       html+='<div class="inscr-top"><div><div class="inscr-name">'+ins.name+'</div><div class="inscr-meta">📞 '+(ins.phone||'—')+' · 📍 '+(ins.zone||'—')+'</div>'+(ins.address?'<div class="inscr-meta">🏠 '+ins.address+'</div>':'')+(ins.message?'<div class="inscr-msg">💬 '+ins.message+'</div>':'')+'</div><div style="text-align:right"><span class="badge badge-'+(isPending?'pending':'active')+'">'+(isPending?'⏳ En attente':'✅ Traite')+'</span><div class="inscr-date">'+fmtDate(ins.created_at)+'</div></div></div>';
       if(isPending)html+='<div class="inscr-btns"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:12px" onclick="acceptInscription(\''+ins.id+'\',\''+ins.name+'\',\''+(ins.phone||'')+'\',\''+(ins.zone||'')+'\')">✓ Accepter et creer le compte</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:12px" onclick="rejectInscription(\''+ins.id+'\')">✗ Refuser</button></div>';
-      else html+='<button class="btn" style="margin-top:8px;padding:8px;font-size:12px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteInscription(\''+ins.id+'\')">🗑 Supprimer</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
@@ -963,11 +1313,6 @@ async function createFromInscription(inscriptionId){
 async function rejectInscription(id){
   if(!confirm('Refuser cette inscription ?'))return;
   try{await sbPatch('inscriptions','id=eq.'+id,{status:'rejected'});toast('Inscription refusee');renderAdminInscriptions();}
-  catch(e){toast('Erreur','error');}
-}
-async function deleteInscription(id){
-  if(!confirm('Supprimer cette inscription ? Irreversible.'))return;
-  try{await sbDelete('inscriptions','id=eq.'+id);toast('Inscription supprimee');renderAdminInscriptions();}
   catch(e){toast('Erreur','error');}
 }
 
