@@ -69,6 +69,8 @@ async function doLogin(){
   const err=document.getElementById('login-err');
   if(!u||!p){err.style.display='flex';err.querySelector('.err-msg').textContent='Remplissez tous les champs';return;}
   btn.innerHTML='<div class="btn-spinner"></div> Connexion...';btn.disabled=true;
+  // Sauvegarder le login pour connexion rapide
+  localStorage.setItem('nty_remember_user',u);
   try{
     const admins=await sbGet('admins','username=eq.'+u+'&password=eq.'+p);
     if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';showPage('page-admin');checkExpiredClients();aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
@@ -138,7 +140,7 @@ async function renderClientHome(){
     html+='<button class="btn btn-primary btn-full" onclick="cPage(\'paiement\',document.getElementById(\'cnav-paiement\'))">🔄 Renouveler l abonnement</button></div>';
 
     // Ticket
-    if(u.current_ticket)html+='<div class="ticket-card"><div class="ticket-label">🎫 VOTRE TICKET MIKROTIK ACTIF</div><div class="ticket-code">'+u.current_ticket+'</div><div class="ticket-valid">Valable du '+startFmt+' au '+endFmt+' a 23h59</div></div>';
+    if(u.current_ticket)html+='<div class="ticket-card" onclick="copyTicket(\''+u.current_ticket+'\')"><div class="ticket-label">🎫 VOTRE TICKET MIKROTIK ACTIF</div><div class="ticket-code">'+u.current_ticket+'</div><div class="ticket-copy-hint">👆 Appuyez pour copier</div><div class="ticket-valid">Valable du '+startFmt+' au '+endFmt+' a 23h59</div></div>';
 
     // Consommation 100Go/200Go
     const isLP=u.plan==='100 Go'||u.plan==='200 Go';
@@ -426,8 +428,11 @@ function renderClientProfil(){
   html+='<div class="info-row"><div class="info-key">📅 Fin</div><div class="info-val">'+(u.expiry_date?fmtDate(u.expiry_date)+' a 23h59':'—')+'</div></div>';
   html+='<div class="info-row"><div class="info-key">🗓 Membre depuis</div><div class="info-val">'+fmtDate(u.join_date)+'</div></div></div>';
   html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe</button></div>';
+  html+='<button class="btn btn-ghost btn-full" style="margin-top:8px" id="install-btn" onclick="installApp()" style="display:none">📲 Installer l app sur mon telephone</button>';
   html+='<button class="btn btn-danger btn-full" style="margin-top:8px" onclick="logout()">🚪 Se deconnecter</button></div>';
   c.innerHTML=html;
+  // Afficher le bouton installer si disponible
+  if(window.ntyDeferredPrompt){document.getElementById('install-btn').style.display='flex';}
 }
 function showEditProfile(){
   showModal('<div class="modal-title">✏️ Modifier profil <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet</label><input class="inp" type="text" id="ep-name" value="'+me.name+'"><label class="inp-label">Telephone</label><input class="inp" type="tel" id="ep-phone" value="'+(me.phone||'')+'"><p style="font-size:11px;color:var(--text3);margin-bottom:12px">Pour modifier username ou plan, contactez l administrateur.</p><button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Enregistrer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
@@ -517,7 +522,38 @@ async function renderAdminDashboard(){
       html+='</div>';
     }
 
-    // Expirent bientot
+    // Revenus du jour
+    const todayStr=today();
+    const todayPayments=payments.filter(p=>p.status==='validated'&&p.payment_date===todayStr);
+    const todayRevenue=todayPayments.reduce((s,p)=>s+(parseInt((p.amount||'0').replace(/\./g,''))||0),0);
+    if(todayRevenue>0||todayPayments.length>0){
+      html+='<div class="section-card" style="background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(5,150,105,0.03));border-color:rgba(16,185,129,0.2)">';
+      html+='<div class="section-head" style="color:#34d399">⚡ Aujourd hui en temps reel</div>';
+      html+='<div style="display:flex;gap:12px">';
+      html+='<div style="flex:1;text-align:center;padding:12px;background:rgba(16,185,129,0.08);border-radius:var(--r)"><div style="font-size:22px;font-weight:800;color:#34d399;font-family:var(--mono)">'+todayRevenue.toLocaleString('fr')+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Ar encaissés</div></div>';
+      html+='<div style="flex:1;text-align:center;padding:12px;background:rgba(59,130,246,0.08);border-radius:var(--r)"><div style="font-size:22px;font-weight:800;color:var(--accent2);font-family:var(--mono)">'+todayPayments.length+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Paiement(s)</div></div>';
+      html+='</div></div>';
+    }
+
+    // Calendrier renouvellements cette semaine
+    const in7days=new Date();in7days.setDate(in7days.getDate()+7);
+    const thisWeek=clients.filter(x=>{
+      if(!x.expiry_date)return false;
+      const exp=new Date(x.expiry_date);
+      return exp>=new Date()&&exp<=in7days;
+    }).sort((a,b)=>new Date(a.expiry_date)-new Date(b.expiry_date));
+
+    if(thisWeek.length>0){
+      html+='<div class="section-card"><div class="section-head">📅 Renouvellements cette semaine</div>';
+      thisWeek.forEach(x=>{
+        const dl=daysLeft(x.expiry_date);
+        const urgColor=dl<=2?'var(--danger2)':dl<=4?'var(--warning2)':'var(--accent2)';
+        html+='<div class="info-row"><div class="info-key"><div style="font-weight:600">'+x.name+'</div><div style="font-size:11px;color:var(--text3)">'+x.plan+' · expire le '+fmtDate(x.expiry_date)+'</div></div><div style="display:flex;align-items:center;gap:8px"><div style="font-family:var(--mono);font-weight:800;color:'+urgColor+'">'+dl+'j</div><span class="badge badge-'+(dl<=2?'expired':'pending')+'">'+(dl<=2?'🔴 Urgent':'⏰ Bientot')+'</span></div></div>';
+      });
+      html+='</div>';
+    }
+
+    // Expirent bientot (5 jours)
     if(soon.length>0){
       html+='<div class="section-card"><div class="section-head">⏰ Expirent dans 5 jours ou moins</div>';
       soon.forEach(x=>{const dl=daysLeft(x.expiry_date);html+='<div class="info-row"><div class="info-key"><div style="font-weight:600">'+x.name+'</div><div style="font-size:11px;color:var(--text3)">'+x.plan+' · expire le '+fmtDate(x.expiry_date)+'</div></div><div class="info-val" style="color:var(--warning);font-family:var(--mono);font-weight:700">'+dl+'j</div></div>';});
@@ -541,6 +577,44 @@ function showCoupureEdit(zoneName){
 }
 function setPreset(el,msg){document.querySelectorAll('.preset-item').forEach(i=>i.classList.remove('selected'));el.classList.add('selected');document.getElementById('coupure-msg-inp').value=msg;}
 function saveCoupureMsg(zKey){const msg=document.getElementById('coupure-msg-inp').value.trim();if(!msg){toast('Entrez un message','error');return;}localStorage.setItem(zKey,msg);closeModal();toast('✅ Message enregistre !');}
+// ═══ MESSAGE GROUPE ═══
+async function showGroupMessage(){
+  let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
+  const zOpts=zones.map(z=>'<option value="'+z.name+'">'+z.name+'</option>').join('');
+  let html='<div class="modal-title">💬 Message groupe <button class="modal-close" onclick="closeModal()">×</button></div>';
+  html+='<p style="font-size:12px;color:var(--text2);margin-bottom:14px">Envoyez un message a tous les clients d une zone en meme temps.</p>';
+  html+='<label class="inp-label">Zone cible</label>';
+  html+='<select class="inp" id="grp-zone"><option value="all">📢 Tous les clients (toutes zones)</option>'+zOpts+'</select>';
+  html+='<label class="inp-label">Message</label>';
+  html+='<textarea class="inp" id="grp-msg" rows="4" placeholder="Ex: Maintenance prevue ce soir de 22h a 23h. Merci de votre comprehension."></textarea>';
+  html+='<p style="font-size:11px;color:var(--text3);margin-bottom:12px">⚠️ Ce message sera envoye a TOUS les clients de la zone selectionnee.</p>';
+  html+='<button class="btn btn-primary btn-full" onclick="sendGroupMessage()">📤 Envoyer a tous</button>';
+  html+='<button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>';
+  showModal(html);
+}
+
+async function sendGroupMessage(){
+  const zone=document.getElementById('grp-zone').value;
+  const msg=document.getElementById('grp-msg').value.trim();
+  if(!msg){toast('Ecrivez un message','error');return;}
+  try{
+    let clients=[];
+    if(zone==='all')clients=await sbGet('clients','select=id,name');
+    else clients=await sbGet('clients','zone=eq.'+zone+'&select=id,name');
+    if(!clients.length){toast('Aucun client dans cette zone','error');return;}
+    let sent=0;
+    for(let i=0;i<clients.length;i+=5){
+      const batch=clients.slice(i,i+5);
+      await Promise.all(batch.map(c=>sbPost('messages',{client_id:c.id,sender:'admin',sender_name:'Admin',content:'Message NTY Starnet : '+msg})));
+
+
+      sent+=batch.length;
+    }
+    closeModal();launchConfetti();
+    toast('✅ Message envoye a '+sent+' client(s) !');
+  }catch(e){toast('Erreur envoi groupe','error');}
+}
+
 async function showZoneManager(){
   let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
   let html='<div class="modal-title">⚙️ Gerer les zones <button class="modal-close" onclick="closeModal()">×</button></div><div style="margin-bottom:14px">';
@@ -1290,6 +1364,7 @@ async function renderAdminInscriptions(){
       html+='<div class="inscr-card '+(isPending?'inscr-pending':'inscr-done')+'">';
       html+='<div class="inscr-top"><div><div class="inscr-name">'+ins.name+'</div><div class="inscr-meta">📞 '+(ins.phone||'—')+' · 📍 '+(ins.zone||'—')+'</div>'+(ins.address?'<div class="inscr-meta">🏠 '+ins.address+'</div>':'')+(ins.message?'<div class="inscr-msg">💬 '+ins.message+'</div>':'')+'</div><div style="text-align:right"><span class="badge badge-'+(isPending?'pending':'active')+'">'+(isPending?'⏳ En attente':'✅ Traite')+'</span><div class="inscr-date">'+fmtDate(ins.created_at)+'</div></div></div>';
       if(isPending)html+='<div class="inscr-btns"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:12px" onclick="acceptInscription(\''+ins.id+'\',\''+ins.name+'\',\''+(ins.phone||'')+'\',\''+(ins.zone||'')+'\')">✓ Accepter et creer le compte</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:12px" onclick="rejectInscription(\''+ins.id+'\')">✗ Refuser</button></div>';
+      if(!isPending)html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deleteInscription(\''+ins.id+'\')">🗑 Supprimer</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
@@ -1408,6 +1483,23 @@ function clearAllCache(){
   closeModal();
 }
 
+// ═══ COPIER TICKET ═══
+function copyTicket(code){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(()=>{
+      toast('✅ Ticket copie ! Collez-le dans Login ET Mot de passe sur la page Mikrotik.');
+    }).catch(()=>fallbackCopy(code));
+  } else fallbackCopy(code);
+}
+function fallbackCopy(text){
+  const el=document.createElement('textarea');
+  el.value=text;el.style.position='fixed';el.style.opacity='0';
+  document.body.appendChild(el);el.select();
+  try{document.execCommand('copy');toast('✅ Ticket copie !');}
+  catch(e){toast('Copiez manuellement: '+text);}
+  document.body.removeChild(el);
+}
+
 // CONFETTIS & EASTER EGG
 function launchConfetti(){
   const colors=['#3b82f6','#60a5fa','#34d399','#fbbf24','#a78bfa','#f87171'];
@@ -1490,8 +1582,36 @@ function autoCalcExpiry(){
   if(expiryEl)expiryEl.value=endStr;
 }
 
+// ═══ PWA INSTALL ═══
+window.ntyDeferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  window.ntyDeferredPrompt=e;
+  const btn=document.getElementById('install-btn');
+  if(btn)btn.style.display='flex';
+});
+function installApp(){
+  if(!window.ntyDeferredPrompt){
+    toast('Pour installer : Menu du navigateur → Ajouter a l ecran d accueil');
+    return;
+  }
+  window.ntyDeferredPrompt.prompt();
+  window.ntyDeferredPrompt.userChoice.then(result=>{
+    if(result.outcome==='accepted'){toast('✅ Application installee !');}
+    window.ntyDeferredPrompt=null;
+    const btn=document.getElementById('install-btn');
+    if(btn)btn.style.display='none';
+  });
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initStars();
+  // Connexion rapide - remplir le username sauvegardé
+  const savedUser=localStorage.getItem('nty_remember_user');
+  if(savedUser){
+    const userInp=document.getElementById('login-user');
+    if(userInp){userInp.value=savedUser;document.getElementById('login-pass').focus();}
+  }
   document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
 });

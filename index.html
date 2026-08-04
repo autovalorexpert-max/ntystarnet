@@ -1085,6 +1085,273 @@ textarea.inp{resize:vertical;min-height:80px}
     z-index:0;
   }
 }
+
+/* ═══ TICKET COPIABLE ═══ */
+.ticket-card{cursor:pointer;transition:all var(--transition)}
+.ticket-card:hover{border-color:var(--accent);transform:scale(1.01);box-shadow:0 0 25px rgba(59,130,246,0.15)}
+.ticket-copy-hint{font-size:10px;color:var(--accent2);margin-bottom:6px;opacity:0.7;letter-spacing:0.05em}
+
+
+/* ═══════════════════════════════
+   ANIMATIONS FLUIDES 2026
+═══════════════════════════════ */
+
+/* Page transitions */
+.c-content, .a-content {
+  animation: none;
+}
+
+/* Cards apparition en cascade */
+.client-card, .pay-card, .pay-item, .notif-card, .section-card,
+.stat-card-admin, .stat-pill, .conv-card, .inscr-card, .plan-card,
+.history-row, .ticket-row, .info-row {
+  animation: slideInUp 0.3s cubic-bezier(0.34,1.2,0.64,1) both;
+}
+.client-card:nth-child(1),.pay-card:nth-child(1),.notif-card:nth-child(1){animation-delay:0ms}
+.client-card:nth-child(2),.pay-card:nth-child(2),.notif-card:nth-child(2){animation-delay:40ms}
+.client-card:nth-child(3),.pay-card:nth-child(3),.notif-card:nth-child(3){animation-delay:80ms}
+.client-card:nth-child(4),.pay-card:nth-child(4),.notif-card:nth-child(4){animation-delay:120ms}
+.client-card:nth-child(5),.pay-card:nth-child(5),.notif-card:nth-child(5){animation-delay:160ms}
+.client-card:nth-child(n+6),.pay-card:nth-child(n+6){animation-delay:200ms}
+
+@keyframes slideInUp {
+  from { opacity:0; transform:translateY(16px) scale(0.98); }
+  to   { opacity:1; transform:translateY(0)    scale(1);    }
+}
+
+/* Hero card animation */
+.hero-card {
+  animation: fadeInScale 0.5s cubic-bezier(0.34,1.1,0.64,1) both;
+}
+@keyframes fadeInScale {
+  from { opacity:0; transform:scale(0.96); }
+  to   { opacity:1; transform:scale(1);    }
+}
+
+/* Ticket card pulse */
+.ticket-card {
+  animation: fadeInScale 0.5s 0.1s cubic-bezier(0.34,1.1,0.64,1) both;
+}
+
+/* Nav active indicator */
+.nav-btn.active::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:20px;
+  height:3px;
+  background:var(--accent);
+  border-radius:2px 2px 0 0;
+  animation:navIndicator 0.3s cubic-bezier(0.34,1.4,0.64,1) both;
+}
+@keyframes navIndicator {
+  from { width:0; opacity:0; }
+  to   { width:20px; opacity:1; }
+}
+
+/* Button press effect */
+.btn {
+  transform-origin: center;
+}
+.btn:active {
+  transform: scale(0.96);
+  transition: transform 0.1s ease !important;
+}
+
+/* Smooth input focus */
+.inp, .form-input {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+/* Modal animation améliorée */
+@keyframes slideUp {
+  from { transform:translateY(100%); opacity:0; }
+  to   { transform:translateY(0);    opacity:1; }
+}
+@keyframes modalBgIn {
+  from { opacity:0; backdrop-filter:blur(0); }
+  to   { opacity:1; backdrop-filter:blur(8px); }
+}
+
+/* Spinner premium */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(59,130,246,0.1);
+  border-top-color: var(--accent);
+  border-right-color: rgba(59,130,246,0.4);
+  animation: spinSmooth 0.7s cubic-bezier(0.4,0,0.2,1) infinite;
+}
+@keyframes spinSmooth {
+  to { transform: rotate(360deg); }
+}
+
+/* Toast animation améliorée */
+.toast {
+  transition: all 0.4s cubic-bezier(0.34,1.3,0.64,1) !important;
+  border-radius: 14px !important;
+}
+
+/* Revenue counter animation */
+.revenue-amount {
+  animation: countUp 0.8s cubic-bezier(0.4,0,0.2,1) both;
+}
+@keyframes countUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Stats grid animation */
+.stat-card-admin {
+  animation: slideInUp 0.35s cubic-bezier(0.34,1.2,0.64,1) both;
+}
+.stats-grid .stat-card-admin:nth-child(1){animation-delay:0ms}
+.stats-grid .stat-card-admin:nth-child(2){animation-delay:60ms}
+.stats-grid .stat-card-admin:nth-child(3){animation-delay:120ms}
+.stats-grid .stat-card-admin:nth-child(4){animation-delay:180ms}
+
+/* Profile avatar hover */
+.profile-avatar {
+  transition: transform 0.3s cubic-bezier(0.34,1.4,0.64,1),
+              box-shadow 0.3s ease;
+}
+.profile-hero:hover .profile-avatar {
+  transform: scale(1.08) rotate(-3deg);
+  box-shadow: 0 12px 40px rgba(59,130,246,0.4);
+}
+
+/* Client card hover smooth */
+.client-card {
+  transition: transform 0.2s cubic-bezier(0.34,1.2,0.64,1),
+              border-color 0.2s ease,
+              background 0.2s ease,
+              box-shadow 0.2s ease;
+}
+.client-card:hover {
+  transform: translateX(4px);
+  box-shadow: -3px 0 0 var(--accent), 0 4px 20px rgba(0,0,0,0.2);
+}
+
+/* Plan card selection animation */
+.plan-card {
+  transition: all 0.25s cubic-bezier(0.34,1.2,0.64,1);
+}
+.plan-card.selected {
+  transform: scale(1.02);
+}
+
+/* Chat bubble animation */
+.bubble {
+  animation: bubbleIn 0.25s cubic-bezier(0.34,1.3,0.64,1) both;
+}
+.bubble-sent { transform-origin: right bottom; }
+.bubble-recv { transform-origin: left bottom; }
+@keyframes bubbleIn {
+  from { opacity:0; transform:scale(0.85); }
+  to   { opacity:1; transform:scale(1); }
+}
+
+/* Badge pulse pour les notifications */
+.nav-dot {
+  animation: dotPulse 1.8s ease infinite;
+}
+
+/* Expiry bar animation */
+.expiry-fill {
+  animation: fillBar 1s cubic-bezier(0.4,0,0.2,1) both;
+  animation-delay: 0.3s;
+}
+@keyframes fillBar {
+  from { width: 0 !important; }
+}
+
+/* Data orb ring animation */
+.data-orb-progress {
+  animation: drawRing 1.5s cubic-bezier(0.4,0,0.2,1) both;
+  animation-delay: 0.2s;
+}
+@keyframes drawRing {
+  from { stroke-dashoffset: 263.9 !important; }
+}
+
+/* Smooth scroll dans les listes */
+.msg-list, .modal-box, .c-content, .a-content {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ripple effect sur les boutons */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  border-radius: inherit;
+}
+.btn:active::before {
+  transform: scale(2);
+  opacity: 1;
+  transition: transform 0s, opacity 0s;
+}
+
+/* Topbar glassmorphism amélioré */
+.topbar, .c-nav, .a-nav {
+  transition: background 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* Greeting animation */
+.greeting-name {
+  animation: shimmer 3s ease infinite;
+  background-size: 200% auto;
+}
+@keyframes shimmer {
+  0%   { background-position: 0% center; }
+  50%  { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+/* Section cards stagger */
+.fade-up > .section-card:nth-child(1){animation-delay:0.05s}
+.fade-up > .section-card:nth-child(2){animation-delay:0.1s}
+.fade-up > .section-card:nth-child(3){animation-delay:0.15s}
+.fade-up > .section-card:nth-child(4){animation-delay:0.2s}
+
+/* Zone cards animation */
+.zone-coupure-card {
+  transition: all 0.3s cubic-bezier(0.34,1.2,0.64,1);
+}
+.zone-coupure-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Input label float effect */
+.inp-label {
+  transition: color 0.2s ease;
+}
+.inp:focus ~ .inp-label,
+.inp-label:has(+ .inp:focus) {
+  color: var(--accent2);
+}
+
+/* Smooth page content appear */
+.fade-up {
+  animation: pageFadeIn 0.4s cubic-bezier(0.4,0,0.2,1) both;
+}
+@keyframes pageFadeIn {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
 </style>
 
 </head>
@@ -1245,7 +1512,7 @@ textarea.inp{resize:vertical;min-height:80px}
 
 <!-- MODAL -->
 <div class="modal-bg" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
-  <div class="modal-box" id="modal-content"></div>
+  <div class="modal" id="modal-content"></div>
 </div>
 
 <script src="app.js"></script>
