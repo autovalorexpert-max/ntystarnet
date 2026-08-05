@@ -1414,6 +1414,21 @@ textarea.inp{resize:vertical;min-height:80px}
 @keyframes splashDot{0%,100%{transform:scale(0.6);opacity:0.3}50%{transform:scale(1.2);opacity:1}}
 </style>
 
+<script>
+// Auto-hide du splash screen, indépendant d'app.js (sécurité anti-blocage)
+(function(){
+  function hideSplashNow(){
+    var s = document.getElementById('splash');
+    if(!s) return;
+    s.style.opacity = '0';
+    s.style.pointerEvents = 'none';
+    setTimeout(function(){ if(s) s.style.display = 'none'; }, 650);
+  }
+  window.hideSplash = hideSplashNow; // au cas où app.js voudrait l'appeler aussi
+  setTimeout(hideSplashNow, 2000);
+})();
+</script>
+
 <div class="stars" id="stars"></div>
 
 <!-- LOGIN -->
