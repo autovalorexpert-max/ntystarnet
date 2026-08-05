@@ -73,9 +73,9 @@ async function doLogin(){
   localStorage.setItem('nty_remember_user',u);
   try{
     const admins=await sbGet('admins','username=eq.'+u+'&password=eq.'+p);
-    if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';showPage('page-admin');checkExpiredClients();aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
+    if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';hideSplash();showPage('page-admin');checkExpiredClients();aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
     const clients=await sbGet('clients','username=eq.'+u+'&password=eq.'+p);
-    if(clients.length>0){me={...clients[0],role:'client'};err.style.display='none';showPage('page-client');checkExpiredClient(clients[0]);cPage('home',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
+    if(clients.length>0){me={...clients[0],role:'client'};err.style.display='none';hideSplash();showPage('page-client');checkExpiredClient(clients[0]);cPage('home',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
     err.style.display='flex';err.querySelector('.err-msg').textContent='Identifiants incorrects';
   }catch(e){err.style.display='flex';err.querySelector('.err-msg').textContent='Erreur de connexion. Reessayez.';}
   btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;
@@ -1606,6 +1606,8 @@ function installApp(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   initStars();
+  // Cacher le splash après 2.2 secondes
+  setTimeout(hideSplash, 2200);
   // Connexion rapide - remplir le username sauvegardé
   const savedUser=localStorage.getItem('nty_remember_user');
   if(savedUser){
