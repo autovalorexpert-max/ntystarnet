@@ -916,7 +916,9 @@ async function renderAdminStats(){
     if(Object.keys(planCount).length>0){html+='<div class="section-card"><div class="section-head">Par plan</div>';Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});html+='</div>';}
     html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
     html+='<div class="section-card"><div class="section-head">🗑️ Cache & Stockage</div><button class="btn btn-ghost btn-full" onclick="showCacheManager()">Gérer le cache de l application</button></div>';
+    html+='<button class="btn btn-ghost btn-full" id="install-btn-admin" onclick="installApp()" style="display:none">📲 Installer l app sur cet appareil</button>';
     html+='</div>';c.innerHTML=html;
+    if(window.ntyDeferredPrompt){const ib=document.getElementById('install-btn-admin');if(ib)ib.style.display='flex';}
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
 }
 
@@ -1594,6 +1596,8 @@ window.addEventListener('beforeinstallprompt',e=>{
   window.ntyDeferredPrompt=e;
   const btn=document.getElementById('install-btn');
   if(btn)btn.style.display='flex';
+  const btnA=document.getElementById('install-btn-admin');
+  if(btnA)btnA.style.display='flex';
 });
 function installApp(){
   if(!window.ntyDeferredPrompt){
