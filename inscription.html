@@ -95,6 +95,9 @@
         <option value="Illimite 9+ appareils">Illimite 9+ appareils — 90.000 Ar/mois</option>
       </select>
 
+      <label class="inp-label">Code de parrainage (optionnel)</label>
+      <input class="inp" type="text" id="f-referral" placeholder="Ex: RAKOTO (code d un ami deja client)" style="text-transform:uppercase">
+
       <label class="inp-label">Message ou question (optionnel)</label>
       <textarea class="inp" id="f-message" placeholder="Ex: Je voudrais savoir si mon quartier est couvert..."></textarea>
 
@@ -149,7 +152,9 @@ async function submitInscription(){
   const zone=document.getElementById('f-zone').value;
   const address=document.getElementById('f-address').value.trim();
   const plan=document.getElementById('f-plan').value;
-  const message=document.getElementById('f-message').value.trim();
+  const referral=document.getElementById('f-referral').value.trim().toUpperCase();
+  let message=document.getElementById('f-message').value.trim();
+  if(referral)message=('🎁 Parraine par: '+referral+(message?' — '+message:''));
 
   if(!name){toast('Entrez votre nom complet','error');return;}
   if(!phone){toast('Entrez votre numero de telephone','error');return;}

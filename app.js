@@ -1,4 +1,77 @@
 const SB_URL='https://bpeliducuuagffwlsjal.supabase.co';
+
+// ═══ THEME & PALETTE (applique immediatement pour eviter le flash) ═══
+const NTY_PALETTES={
+  blue:{a:'#3b82f6',a2:'#60a5fa',a3:'#93c5fd'},
+  purple:{a:'#8b5cf6',a2:'#a78bfa',a3:'#c4b5fd'},
+  green:{a:'#10b981',a2:'#34d399',a3:'#6ee7b7'},
+  orange:{a:'#f97316',a2:'#fb923c',a3:'#fdba74'},
+  pink:{a:'#ec4899',a2:'#f472b6',a3:'#f9a8d4'}
+};
+(function applyNtySavedTheme(){
+  const th=localStorage.getItem('nty_theme')||'dark';
+  if(th==='light')document.documentElement.setAttribute('data-theme','light');
+  const pal=localStorage.getItem('nty_palette');
+  if(pal&&NTY_PALETTES[pal]){
+    const p=NTY_PALETTES[pal];
+    document.documentElement.style.setProperty('--accent',p.a);
+    document.documentElement.style.setProperty('--accent2',p.a2);
+    document.documentElement.style.setProperty('--accent3',p.a3);
+  }
+})();
+function toggleTheme(){
+  const isLight=document.documentElement.getAttribute('data-theme')==='light';
+  if(isLight){document.documentElement.removeAttribute('data-theme');localStorage.setItem('nty_theme','dark');}
+  else{document.documentElement.setAttribute('data-theme','light');localStorage.setItem('nty_theme','light');}
+  ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.textContent=isLight?'🌙':'☀️';});
+  if(navigator.vibrate)navigator.vibrate(10);
+}
+function setPalette(name){
+  if(!NTY_PALETTES[name])return;
+  const p=NTY_PALETTES[name];
+  document.documentElement.style.setProperty('--accent',p.a);
+  document.documentElement.style.setProperty('--accent2',p.a2);
+  document.documentElement.style.setProperty('--accent3',p.a3);
+  localStorage.setItem('nty_palette',name);
+  toast('🎨 Theme de couleur applique !');
+  if(navigator.vibrate)navigator.vibrate(10);
+}
+function paletteSwatches(){
+  return '<div style="display:flex;gap:10px;padding:4px 0">'+Object.entries(NTY_PALETTES).map(([k,p])=>'<button onclick="setPalette(\''+k+'\')" style="width:34px;height:34px;border-radius:50%;border:2px solid var(--border2);background:linear-gradient(135deg,'+p.a+','+p.a2+');cursor:pointer"></button>').join('')+'</div>';
+}
+function playNotifSound(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator();const g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.type='sine';o.frequency.setValueAtTime(880,ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1320,ctx.currentTime+0.12);
+    g.gain.setValueAtTime(0.15,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+    o.start();o.stop(ctx.currentTime+0.4);
+  }catch(e){}
+  if(navigator.vibrate)navigator.vibrate([40,30,40]);
+}
+
+// ═══ RECHERCHE GLOBALE ═══
+async function openGlobalSearch(){
+  showModal('<div class="modal-title">🔍 Recherche globale <button class="modal-close" onclick="closeModal()">×</button></div><input class="inp" id="gsearch-inp" placeholder="Nom, username, IP ou telephone..." oninput="doGlobalSearch()" autofocus><div id="gsearch-results" style="margin-top:12px;max-height:50vh;overflow-y:auto"><div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Tapez pour rechercher parmi vos clients</div></div>');
+  setTimeout(()=>{const inp=document.getElementById('gsearch-inp');if(inp)inp.focus();},150);
+  if(!window.ntyClientsCache){try{window.ntyClientsCache=await sbGet('clients','select=id,name,username,ip_address,phone,zone,plan,status');}catch(e){window.ntyClientsCache=[];}}
+}
+function doGlobalSearch(){
+  const q=(document.getElementById('gsearch-inp').value||'').trim().toLowerCase();
+  const r=document.getElementById('gsearch-results');
+  if(!q){r.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Tapez pour rechercher parmi vos clients</div>';return;}
+  const list=(window.ntyClientsCache||[]).filter(c=>
+    (c.name||'').toLowerCase().includes(q)||
+    (c.username||'').toLowerCase().includes(q)||
+    (c.ip_address||'').toLowerCase().includes(q)||
+    (c.phone||'').toLowerCase().includes(q)
+  ).slice(0,20);
+  if(!list.length){r.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Aucun resultat</div>';return;}
+  r.innerHTML=list.map(c=>'<div class="info-row" style="cursor:pointer" onclick="closeModal();setTimeout(()=>openDetail(\''+c.id+'\'),200)"><div class="info-key"><div style="font-weight:600">'+(c.name||'—')+'</div><div style="font-size:11px;color:var(--text3)">@'+(c.username||'—')+' · '+(c.ip_address||'—')+' · '+(c.phone||'—')+'</div></div><span class="badge badge-'+(c.status||'pending')+'" style="font-size:9px">'+(c.status||'—')+'</span></div>').join('');
+}
 const SB_KEY='sb_publishable_3HKOfxQfItpFE8VYDIEULg_j550L4Hi';
 
 async function sb(table,method='GET',body=null,query=''){
@@ -427,6 +500,8 @@ function renderClientProfil(){
   html+='<div class="info-row"><div class="info-key">📅 Debut</div><div class="info-val">'+fmtDate(u.start_date)+'</div></div>';
   html+='<div class="info-row"><div class="info-key">📅 Fin</div><div class="info-val">'+(u.expiry_date?fmtDate(u.expiry_date)+' a 23h59':'—')+'</div></div>';
   html+='<div class="info-row"><div class="info-key">🗓 Membre depuis</div><div class="info-val">'+fmtDate(u.join_date)+'</div></div></div>';
+  html+='<div class="section-card"><div class="section-head">🎁 Parrainage</div><p style="font-size:12px;color:var(--text2);margin-bottom:10px">Invitez vos amis avec votre code et faites decouvrir NTY Starnet !</p><div style="display:flex;gap:8px"><div class="ticket-preview-big" style="flex:1;padding:10px"><div class="tp-label">VOTRE CODE</div><div class="tp-code" style="font-size:18px">'+u.username.toUpperCase()+'</div></div></div><a href="https://wa.me/?text='+encodeURIComponent('Salut ! Utilise mon code '+u.username.toUpperCase()+' pour t inscrire chez NTY Starnet 🌐 : '+location.origin+'/inscription.html')+'" target="_blank" class="btn btn-success btn-full" style="margin-top:10px">📤 Partager sur WhatsApp</a></div>';
+  html+='<div class="section-card"><div class="section-head">🎨 Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Choisissez votre couleur preferee</p>'+paletteSwatches()+'</div>';
   html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe</button></div>';
   html+='<button class="btn btn-ghost btn-full" style="margin-top:8px" id="install-btn" onclick="installApp()" style="display:none">📲 Installer l app sur mon telephone</button>';
   html+='<button class="btn btn-danger btn-full" style="margin-top:8px" onclick="logout()">🚪 Se deconnecter</button></div>';
@@ -472,17 +547,20 @@ function aPage(page,btn){
 async function renderAdminDashboard(){
   const c=document.getElementById('a-content');
   try{
-    const [clients,payments]=await Promise.all([sbGet('clients'),sbGet('payments','order=created_at.desc')]);
+    const [clients,payments,inscrip,zones]=await Promise.all([
+      sbGet('clients'),
+      sbGet('payments','order=created_at.desc'),
+      sbGet('inscriptions','status=eq.pending').catch(()=>[]),
+      sbGet('zones','order=name.asc').catch(()=>[])
+    ]);
     const pPending=payments.filter(p=>p.status==='pending');
+    const lastCount=localStorage.getItem('nty_last_pending_count');
+    if(lastCount!==null&&pPending.length>parseInt(lastCount)){playNotifSound();toast('🔔 Nouveau paiement en attente !');}
+    localStorage.setItem('nty_last_pending_count',pPending.length);
     const revenue=payments.filter(p=>p.status==='validated').reduce((s,p)=>s+(parseInt((p.amount||'0').replace(/\./g,''))||0),0);
     const dot=document.getElementById('a-pay-dot');if(dot)dot.style.display=pPending.length>0?'block':'none';
-    // Vérifier inscriptions en attente
-    try{
-      const inscrip=await sbGet('inscriptions','status=eq.pending');
-      const dotI=document.getElementById('a-inscr-dot');if(dotI)dotI.style.display=inscrip.length>0?'block':'none';
-    }catch(e){}
+    const dotI=document.getElementById('a-inscr-dot');if(dotI)dotI.style.display=inscrip.length>0?'block':'none';
     const soon=clients.filter(x=>{const dl=daysLeft(x.expiry_date);return dl!==null&&dl>=0&&dl<=5;});
-    let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
     const cZ=JSON.parse(localStorage.getItem('nty_coupure_zones')||'{}');
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">📊 Dashboard</div><div class="page-sub">Vue generale NTY Starnet</div></div>';
 
@@ -534,6 +612,18 @@ async function renderAdminDashboard(){
       html+='<div style="flex:1;text-align:center;padding:12px;background:rgba(59,130,246,0.08);border-radius:var(--r)"><div style="font-size:22px;font-weight:800;color:var(--accent2);font-family:var(--mono)">'+todayPayments.length+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Paiement(s)</div></div>';
       html+='</div></div>';
     }
+
+    // Mini graphique revenus 7 jours
+    const days7=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days7.push(d.toISOString().slice(0,10));}
+    const dayRevenue=days7.map(ds=>payments.filter(p=>p.status==='validated'&&p.payment_date===ds).reduce((s,p)=>s+(parseInt((p.amount||'0').replace(/\./g,''))||0),0));
+    const maxRev=Math.max(...dayRevenue,1);
+    html+='<div class="section-card"><div class="section-head">📈 Revenus — 7 derniers jours</div><div style="display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:8px">';
+    days7.forEach((ds,i)=>{
+      const h=Math.max(4,Math.round(dayRevenue[i]/maxRev*80));
+      const lbl=new Date(ds).toLocaleDateString('fr-FR',{weekday:'short'}).slice(0,3);
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:'+h+'px;background:linear-gradient(180deg,#60a5fa,#3b82f6);border-radius:4px 4px 0 0;transition:height 0.5s ease" title="'+dayRevenue[i].toLocaleString('fr')+' Ar"></div><div style="font-size:9px;color:var(--text3)">'+lbl+'</div></div>';
+    });
+    html+='</div></div>';
 
     // Calendrier renouvellements cette semaine
     const in7days=new Date();in7days.setDate(in7days.getDate()+7);
@@ -712,6 +802,8 @@ async function validatePay(payId,ticketId,ticketCode,clientId){
       sbPost('messages',{client_id:clientId,sender:'admin',sender_name:'Admin',content:'✅ Paiement valide !\n\n🎫 Votre ticket Mikrotik : '+ticketCode+'\n\n📅 Valable du '+startFmt+' au '+endFmt+' a 23h59.\n\n🔄 Prochain renouvellement : le '+new Date(endDate).getDate()+1+' du mois prochain.\n\nConnectez-vous avec ce code sur NTY Starnet ! 🌐'})
     ]);
     closeModal();
+    window.ntyClientsCache=null;
+    launchConfetti();
     showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:12px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Ticket envoye !</div><div class="ticket-preview-big"><div class="tp-label">TICKET ENVOYE</div><div class="tp-code">'+ticketCode+'</div><div style="font-size:12px;color:var(--text3);margin-top:8px">Du '+startFmt+' au '+endFmt+'</div></div><button class="btn btn-primary btn-full" onclick="closeModal();aPage(\'paiements\',null)">OK ✓</button></div>');
   }catch(e){toast('Erreur lors de la validation','error');}
 }
@@ -724,7 +816,7 @@ async function validateProrata(payId,clientId,newDay,nextDate){
       sbPatch('clients','id=eq.'+clientId,{expiry_date:newExpiry}),
       sbPost('messages',{client_id:clientId,sender:'admin',sender_name:'Admin',content:'✅ Prorata valide !\n\n📅 Votre date de renouvellement a ete changee.\n\n🗓 Nouvelle expiration : '+fmtDateFull(newExpiry)+' a 23h59\n🔄 Prochain renouvellement : le '+newDay+' de chaque mois.\n\nMerci pour votre confiance ! 😊'})
     ]);
-    closeModal();toast('✅ Prorata valide ! Date changee au '+newDay+' du mois.');
+    closeModal();launchConfetti();toast('✅ Prorata valide ! Date changee au '+newDay+' du mois.');
     aPage('paiements',null);
   }catch(e){toast('Erreur validation prorata','error');}
 }
@@ -752,11 +844,12 @@ async function doReject(){
 async function openDetail(id){
   curDetailId=id;
   try{
-    const [clients,tickets]=await Promise.all([sbGet('clients','id=eq.'+id),sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc')]);
+    const [clients,tickets,clientPays]=await Promise.all([sbGet('clients','id=eq.'+id),sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc'),sbGet('payments','client_id=eq.'+id+'&status=eq.validated&payment_type=neq.prorata').catch(()=>[])]);
     const cl=clients[0];const freeT=tickets.filter(t=>!t.is_used);const dl=daysLeft(cl.expiry_date);
+    const streak=clientPays.length;
     let editZones=[];try{editZones=await sbGet('zones','order=name.asc');}catch(e){}
     const renewDay=cl.expiry_date?new Date(cl.expiry_date).getDate()+1:null;
-    let html='<div class="modal-title"><div style="display:flex;align-items:center;gap:10px"><div class="modal-avatar">'+initials(cl.name)+'</div><div><div>'+cl.name+'</div><div style="font-size:11px;color:var(--text3)">@'+cl.username+' · '+(cl.zone||'—')+'</div></div></div><button class="modal-close" onclick="closeModal()">×</button></div>';
+    let html='<div class="modal-title"><div style="display:flex;align-items:center;gap:10px"><div class="modal-avatar">'+initials(cl.name)+'</div><div><div style="display:flex;align-items:center;gap:6px">'+cl.name+(streak>=2?'<span style="font-size:11px;background:linear-gradient(90deg,#f59e0b,#f97316);padding:2px 8px;border-radius:20px;font-weight:700">🔥 '+streak+' mois</span>':'')+'</div><div style="font-size:11px;color:var(--text3)">@'+cl.username+' · '+(cl.zone||'—')+'</div></div></div><button class="modal-close" onclick="closeModal()">×</button></div>';
     html+='<div class="dtabs"><button class="dtab active" onclick="dtab(\'info\',this)">Infos</button><button class="dtab" onclick="dtab(\'tickets\',this)">Tickets ('+freeT.length+')</button><button class="dtab" onclick="dtab(\'edit\',this)">Modifier</button></div>';
 
     // Info tab
@@ -776,7 +869,10 @@ async function openDetail(id){
     ].map(([k,v])=>'<div class="info-row"><div class="info-key">'+k+'</div><div class="info-val">'+v+'</div></div>').join('');
 
     if(cl.plan==='100 Go'||cl.plan==='200 Go'){
+      const cp=cl.consumption_pct||0;
+      const gaugeCol=cp>=90?'linear-gradient(90deg,#f87171,#ef4444)':cp>=75?'linear-gradient(90deg,#fbbf24,#f59e0b)':cp>=50?'linear-gradient(90deg,#60a5fa,#3b82f6)':'linear-gradient(90deg,#34d399,#10b981)';
       html+='<div class="divider"></div><div class="inp-label">📊 Consommation ('+cl.plan+')</div>';
+      html+='<div style="height:20px;border-radius:10px;background:rgba(255,255,255,0.06);overflow:hidden;margin-bottom:10px;position:relative"><div style="height:100%;width:'+cp+'%;background:'+gaugeCol+';border-radius:10px;transition:width 0.6s cubic-bezier(0.34,1.2,0.64,1)"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5)">'+cp+'% utilise</div></div>';
       html+='<div style="display:flex;gap:8px;margin-bottom:8px">';
       [25,50,75,90].forEach(pct=>{html+='<button class="btn '+(cl.consumption_pct==pct?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\','+pct+')">'+pct+'%</button>';});
       html+='</div><button class="btn btn-ghost btn-full" style="margin-bottom:8px" onclick="setConsumption(\''+id+'\',0)">↺ Reinitialiser</button>';
@@ -809,8 +905,8 @@ async function openDetail(id){
 }
 
 function dtab(tab,btn){document.querySelectorAll('#modal-content .dtab').forEach(t=>t.classList.remove('active'));if(btn)btn.classList.add('active');['info','tickets','edit'].forEach(t=>{const el=document.getElementById('dt-'+t);if(el)el.style.display=t===tab?'block':'none';});}
-async function quickStatus(id,status){try{await sbPatch('clients','id=eq.'+id,{status});closeModal();toast('Statut mis a jour !');renderAdminClients();}catch(e){toast('Erreur','error');}}
-async function deleteClient(id,name){if(!confirm('Supprimer "'+name+'" ? Irreversible.'))return;try{await sbDelete('clients','id=eq.'+id);closeModal();toast('Client supprime');renderAdminClients();}catch(e){toast('Erreur','error');}}
+async function quickStatus(id,status){try{await sbPatch('clients','id=eq.'+id,{status});closeModal();window.ntyClientsCache=null;toast('Statut mis a jour !');renderAdminClients();}catch(e){toast('Erreur','error');}}
+async function deleteClient(id,name){if(!confirm('Supprimer "'+name+'" ? Irreversible.'))return;try{await sbDelete('clients','id=eq.'+id);closeModal();toast('Client supprime');window.ntyClientsCache=null;renderAdminClients();}catch(e){toast('Erreur','error');}}
 async function addMoreTickets(clientId){const raw=document.getElementById('new-tickets-inp')?.value.trim();if(!raw){toast('Entrez un ticket','error');return;}const codes=raw.split('\n').map(t=>t.trim()).filter(t=>t);try{for(const code of codes){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}toast('✅ '+codes.length+' ticket(s) ajoute(s) !');openDetail(clientId);}catch(e){toast('Erreur','error');}}
 async function setConsumption(id,pct){
   try{
@@ -831,7 +927,7 @@ async function saveClientEdit(id){
   if(startDate)updates.start_date=startDate;
   if(expiryDate)updates.expiry_date=expiryDate;
   if(pass){if(pass.length<4){toast('Mot de passe trop court','error');return;}updates.password=pass;}
-  try{await sbPatch('clients','id=eq.'+id,updates);closeModal();toast('✅ Client modifie !');renderAdminClients();}
+  try{await sbPatch('clients','id=eq.'+id,updates);closeModal();toast('✅ Client modifie !');window.ntyClientsCache=null;renderAdminClients();}
   catch(e){toast('Erreur. Username peut-etre deja utilise.','error');}
 }
 async function showAddClient(){
@@ -852,7 +948,7 @@ async function addClient(){
     const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
     const clientId=nc[0].id;
     for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
-    closeModal();
+    closeModal();window.ntyClientsCache=null;
     showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:12px">🎉</div><div class="modal-title" style="justify-content:center">Client cree !</div><div class="info-box" style="margin:12px 0"><div class="info-row"><div class="info-key">Nom</div><div class="info-val">'+name+'</div></div><div class="info-row"><div class="info-key">Username</div><div class="info-val" style="font-family:var(--mono)">'+user+'</div></div><div class="info-row"><div class="info-key">Mot de passe</div><div class="info-val" style="font-family:var(--mono)">'+pass+'</div></div><div class="info-row"><div class="info-key">Zone</div><div class="info-val">'+zone+'</div></div></div><button class="btn btn-primary btn-full" onclick="closeModal();renderAdminClients()">OK ✓</button></div>');
   }catch(e){toast('Erreur. Username peut-etre deja utilise.','error');}
 }
@@ -915,6 +1011,7 @@ async function renderAdminStats(){
     html+='</div>';
     if(Object.keys(planCount).length>0){html+='<div class="section-card"><div class="section-head">Par plan</div>';Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});html+='</div>';}
     html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
+    html+='<div class="section-card"><div class="section-head">🎨 Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Couleur d accent de l application</p>'+paletteSwatches()+'</div>';
     html+='<div class="section-card"><div class="section-head">🗑️ Cache & Stockage</div><button class="btn btn-ghost btn-full" onclick="showCacheManager()">Gérer le cache de l application</button></div>';
     html+='<button class="btn btn-ghost btn-full" id="install-btn-admin" onclick="installApp()" style="display:none">📲 Installer l app sur cet appareil</button>';
     html+='</div>';c.innerHTML=html;
@@ -1409,7 +1506,7 @@ async function createFromInscription(inscriptionId){
     const clientId=nc[0].id;
     for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
     await sbPatch('inscriptions','id=eq.'+inscriptionId,{status:'accepted'});
-    closeModal();toast('✅ Compte cree pour '+name+' !');renderAdminInscriptions();
+    closeModal();window.ntyClientsCache=null;toast('✅ Compte cree pour '+name+' !');renderAdminInscriptions();
   }catch(e){toast('Erreur. Username peut-etre deja utilise.','error');}
 }
 
@@ -1615,6 +1712,8 @@ function installApp(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   initStars();
+  const isLight=document.documentElement.getAttribute('data-theme')==='light';
+  ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.textContent=isLight?'☀️':'🌙';});
   // Cacher le splash après 2.2 secondes
   setTimeout(hideSplash, 2200);
   // Connexion rapide - remplir le username sauvegardé
