@@ -126,10 +126,12 @@ function toast(msg,type='success'){
 }
 function initStars(){
   const s=document.getElementById('stars');if(!s)return;
+  const brandColors=['#c4b5fd','#a78bfa','#e879f9','#93c5fd','#ffffff'];
   for(let i=0;i<100;i++){
     const el=document.createElement('div');el.className='star';
     const sz=Math.random()*2+0.5;
-    el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--delay:'+Math.random()*5+'s;--op:'+(0.2+Math.random()*0.7);
+    const col=brandColors[Math.floor(Math.random()*brandColors.length)];
+    el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--delay:'+Math.random()*5+'s;--op:'+(0.2+Math.random()*0.7)+';background:'+col;
     s.appendChild(el);
   }
 }
@@ -609,7 +611,7 @@ async function renderAdminDashboard(){
       html+='<div class="section-head" style="color:#34d399">⚡ Aujourd hui en temps reel</div>';
       html+='<div style="display:flex;gap:12px">';
       html+='<div style="flex:1;text-align:center;padding:12px;background:rgba(16,185,129,0.08);border-radius:var(--r)"><div style="font-size:22px;font-weight:800;color:#34d399;font-family:var(--mono)">'+todayRevenue.toLocaleString('fr')+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Ar encaissés</div></div>';
-      html+='<div style="flex:1;text-align:center;padding:12px;background:rgba(59,130,246,0.08);border-radius:var(--r)"><div style="font-size:22px;font-weight:800;color:var(--accent2);font-family:var(--mono)">'+todayPayments.length+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Paiement(s)</div></div>';
+      html+='<div style="flex:1;text-align:center;padding:12px;background:rgba(139,92,246,0.08);border-radius:var(--r)"><div style="font-size:22px;font-weight:800;color:var(--accent2);font-family:var(--mono)">'+todayPayments.length+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Paiement(s)</div></div>';
       html+='</div></div>';
     }
 
@@ -621,7 +623,7 @@ async function renderAdminDashboard(){
     days7.forEach((ds,i)=>{
       const h=Math.max(4,Math.round(dayRevenue[i]/maxRev*80));
       const lbl=new Date(ds).toLocaleDateString('fr-FR',{weekday:'short'}).slice(0,3);
-      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:'+h+'px;background:linear-gradient(180deg,#60a5fa,#3b82f6);border-radius:4px 4px 0 0;transition:height 0.5s ease" title="'+dayRevenue[i].toLocaleString('fr')+' Ar"></div><div style="font-size:9px;color:var(--text3)">'+lbl+'</div></div>';
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:'+h+'px;background:linear-gradient(180deg,#a78bfa,#8b5cf6);border-radius:4px 4px 0 0;transition:height 0.5s ease" title="'+dayRevenue[i].toLocaleString('fr')+' Ar"></div><div style="font-size:9px;color:var(--text3)">'+lbl+'</div></div>';
     });
     html+='</div></div>';
 
@@ -870,7 +872,7 @@ async function openDetail(id){
 
     if(cl.plan==='100 Go'||cl.plan==='200 Go'){
       const cp=cl.consumption_pct||0;
-      const gaugeCol=cp>=90?'linear-gradient(90deg,#f87171,#ef4444)':cp>=75?'linear-gradient(90deg,#fbbf24,#f59e0b)':cp>=50?'linear-gradient(90deg,#60a5fa,#3b82f6)':'linear-gradient(90deg,#34d399,#10b981)';
+      const gaugeCol=cp>=90?'linear-gradient(90deg,#f87171,#ef4444)':cp>=75?'linear-gradient(90deg,#fbbf24,#f59e0b)':cp>=50?'linear-gradient(90deg,#a78bfa,#8b5cf6)':'linear-gradient(90deg,#34d399,#10b981)';
       html+='<div class="divider"></div><div class="inp-label">📊 Consommation ('+cl.plan+')</div>';
       html+='<div style="height:20px;border-radius:10px;background:rgba(255,255,255,0.06);overflow:hidden;margin-bottom:10px;position:relative"><div style="height:100%;width:'+cp+'%;background:'+gaugeCol+';border-radius:10px;transition:width 0.6s cubic-bezier(0.34,1.2,0.64,1)"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5)">'+cp+'% utilise</div></div>';
       html+='<div style="display:flex;gap:8px;margin-bottom:8px">';
@@ -1087,7 +1089,7 @@ async function exportClientsExcel(){
       let t=`
 <!-- ZONE ${zoneName.toUpperCase()} -->
 <tr>
-  <td colspan="10" style="background:#1e3a5f;color:#60a5fa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #3b82f6">
+  <td colspan="10" style="background:#1e3a5f;color:#a78bfa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #8b5cf6">
     📍 ${zoneName} &nbsp;·&nbsp; ${list.length} client(s)
   </td>
 </tr>
@@ -1114,7 +1116,7 @@ async function exportClientsExcel(){
         t+=`<tr style="background:${bg}">
   <td style="padding:9px 12px;color:#64748b;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600">${i+1}</td>
   <td style="padding:9px 12px;font-weight:700;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b">${c.name||'—'}</td>
-  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#3b82f6;font-family:Courier New,monospace">@${c.username||'—'}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#8b5cf6;font-family:Courier New,monospace">@${c.username||'—'}</td>
   <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b;font-weight:500">${c.plan||'—'}</td>
   <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f766e;font-family:Courier New,monospace">${(c.plan_price||'—')} Ar</td>
   <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;background:${statusBg};color:${statusColor};font-weight:700">${status}</td>
@@ -1131,7 +1133,7 @@ async function exportClientsExcel(){
     // Tableau récapitulatif des abonnements
     html+=`
 <tr>
-  <td colspan="10" style="background:#0f2a4a;color:#60a5fa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #10b981">
+  <td colspan="10" style="background:#0f2a4a;color:#a78bfa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #10b981">
     📊 RÉCAPITULATIF DES ABONNEMENTS
   </td>
 </tr>
@@ -1147,7 +1149,7 @@ async function exportClientsExcel(){
       const activeCount=clients.filter(c=>c.plan===plan&&c.status==='active').length;
       html+=`<tr style="background:${bg}">
   <td colspan="3" style="padding:9px 12px;font-weight:700;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b">${plan}</td>
-  <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#3b82f6">${data.count} client(s)</td>
+  <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#8b5cf6">${data.count} client(s)</td>
   <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#10b981">${activeCount} actif(s)</td>
   <td colspan="3" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f766e;font-family:Courier New,monospace">${data.revenue.toLocaleString('fr')} Ar</td>
 </tr>`;
@@ -1538,7 +1540,7 @@ async function showCacheManager(){
   const totalKB=(totalSize/1024).toFixed(1);
 
   let html='<div class="modal-title">🗑️ Gestionnaire du cache <button class="modal-close" onclick="closeModal()">×</button></div>';
-  html+='<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:var(--r);padding:12px;margin-bottom:14px;text-align:center">';
+  html+='<div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:var(--r);padding:12px;margin-bottom:14px;text-align:center">';
   html+='<div style="font-size:22px;font-weight:800;color:var(--accent2)">'+totalKB+' KB</div>';
   html+='<div style="font-size:12px;color:var(--text2);margin-top:2px">Utilisés sur votre appareil (max ~5MB)</div></div>';
   html+='<div style="margin-bottom:12px">';
@@ -1601,7 +1603,7 @@ function fallbackCopy(text){
 
 // CONFETTIS & EASTER EGG
 function launchConfetti(){
-  const colors=['#3b82f6','#60a5fa','#34d399','#fbbf24','#a78bfa','#f87171'];
+  const colors=['#8b5cf6','#a78bfa','#34d399','#fbbf24','#d946ef','#f87171'];
   const container=document.createElement('div');container.className='confetti-container';document.body.appendChild(container);
   for(let i=0;i<60;i++){const cc=document.createElement('div');cc.className='confetti-piece';cc.style.left=Math.random()*100+'%';cc.style.background=colors[Math.floor(Math.random()*colors.length)];cc.style.animationDelay=(Math.random()*0.4)+'s';cc.style.animationDuration=(2+Math.random()*1.5)+'s';cc.style.width=cc.style.height=(6+Math.random()*6)+'px';cc.style.borderRadius=Math.random()>0.5?'50%':'2px';container.appendChild(cc);}
   setTimeout(()=>container.remove(),3500);
@@ -1620,7 +1622,7 @@ style.textContent=`
 .prorata-step-num{width:26px;height:26px;min-width:26px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
 .prorata-step-text{font-size:12px;color:var(--text2);line-height:1.5;padding-top:4px}
 .prorata-step-text strong{color:var(--text);display:block;margin-bottom:2px}
-.prorata-info-box{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5}
+.prorata-info-box{background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5}
 .prorata-info-box strong{color:var(--accent2)}
 .prorata-card{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(217,119,6,0.04));border:1px solid rgba(245,158,11,0.25);border-radius:var(--r2);padding:16px;margin-bottom:12px}
 .prorata-title{font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:6px}
@@ -1632,7 +1634,7 @@ style.textContent=`
 .prorata-total strong{color:#fbbf24;font-size:16px}
 .prorata-modal-info{background:var(--card2);border-radius:var(--r);padding:12px;margin-bottom:12px}
 .tag-prorata{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700}
-.tag-abo{background:rgba(59,130,246,0.12);color:var(--accent2);border:1px solid rgba(59,130,246,0.25);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700}
+.tag-abo{background:rgba(139,92,246,0.12);color:var(--accent2);border:1px solid rgba(139,92,246,0.25);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700}
 `;
 document.head.appendChild(style);
 
