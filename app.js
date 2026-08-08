@@ -3,7 +3,7 @@ const SB_URL='https://bpeliducuuagffwlsjal.supabase.co';
 // ═══ THEME & PALETTE (applique immediatement pour eviter le flash) ═══
 const NTY_PALETTES={
   blue:{a:'#3b82f6',a2:'#60a5fa',a3:'#93c5fd'},
-  purple:{a:'#8b5cf6',a2:'#a78bfa',a3:'#c4b5fd'},
+  purple:{a:'#7c3aed',a2:'#8b5cf6',a3:'#a78bfa'},
   green:{a:'#10b981',a2:'#34d399',a3:'#6ee7b7'},
   orange:{a:'#f97316',a2:'#fb923c',a3:'#fdba74'},
   pink:{a:'#ec4899',a2:'#f472b6',a3:'#f9a8d4'}
@@ -23,7 +23,7 @@ function toggleTheme(){
   const isLight=document.documentElement.getAttribute('data-theme')==='light';
   if(isLight){document.documentElement.removeAttribute('data-theme');localStorage.setItem('nty_theme','dark');}
   else{document.documentElement.setAttribute('data-theme','light');localStorage.setItem('nty_theme','light');}
-  ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.textContent=isLight?'🌙':'☀️';});
+  ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.innerHTML=isLight?`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;});
   if(navigator.vibrate)navigator.vibrate(10);
 }
 function setPalette(name){
@@ -126,7 +126,7 @@ function toast(msg,type='success'){
 }
 function initStars(){
   const s=document.getElementById('stars');if(!s)return;
-  const brandColors=['#c4b5fd','#a78bfa','#e879f9','#93c5fd','#ffffff'];
+  const brandColors=['#a78bfa','#8b5cf6','#4f46e5','#93c5fd','#ffffff'];
   for(let i=0;i<100;i++){
     const el=document.createElement('div');el.className='star';
     const sz=Math.random()*2+0.5;
@@ -234,7 +234,7 @@ async function renderClientHome(){
 
     // Historique
     if(pays.length>0){
-      html+='<div class="section-card"><div class="section-head">📋 Historique paiements</div>';
+      html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z"/><rect x="4" y="4" width="16" height="18" rx="2"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="16" y2="15"/></svg>Historique paiements</div>';
       pays.forEach(p=>{
         const ic=p.status==='validated'?'✅':p.status==='rejected'?'❌':'⏳';
         const typeTag=p.payment_type==='prorata'?'<span class="tag-prorata">📅 PRORATA</span>':'<span class="tag-abo">🔄 ABONNEMENT</span>';
@@ -280,14 +280,14 @@ function renderClientPaiement(){
   html+='<div class="pay-box"><div class="pay-box-title">📲 Paiement Mobile Money</div>';
   nums.forEach(num=>{html+='<div class="pay-num-row"><div class="pay-num">'+num.n+'</div><div class="pay-num-name">'+num.name+'</div></div>';});
   html+='<div class="pay-box-warn">⚠️ Frais de retrait a votre charge — envoyez le montant exact + frais.</div></div>';
-  html+='<div class="section-card"><div class="section-head">🔄 Renouveler l abonnement</div>';
+  html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Renouveler l abonnement</div>';
   plans.forEach((pl,i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+pl.n+'\')"><div class="plan-icon">'+pl.icon+'</div><div class="plan-info"><div class="plan-name">'+pl.n+'</div><div class="plan-desc">'+pl.d+'</div></div><div class="plan-price">'+pl.p+' Ar</div></div>';});
   html+='</div><div class="section-card"><div class="section-head">Details du paiement</div>';
   html+='<label class="inp-label">Date du paiement *</label><input class="inp" type="date" id="c-paydate" max="'+today()+'">';
   html+='<label class="inp-label">Nom de l envoyeur</label><input class="inp" type="text" id="c-payref" placeholder="Ex: Rakoto Jean">';
   html+='<label class="inp-label">Photo du recu</label>';
   html+='<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'c-photo\').click()"><div class="upload-icon">📷</div><div class="upload-text">Appuyer pour ajouter une photo</div><input type="file" id="c-photo" accept="image/*" style="display:none" onchange="previewPhoto()"></div>';
-  html+='<div id="photo-preview" style="display:none;margin-bottom:12px"><img id="preview-img" style="width:100%;border-radius:12px;max-height:200px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removePhoto()">🗑 Supprimer</button></div>';
+  html+='<div id="photo-preview" style="display:none;margin-bottom:12px"><img id="preview-img" style="width:100%;border-radius:12px;max-height:200px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removePhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button></div>';
   html+='<button class="btn btn-primary btn-full" onclick="submitPay()">📤 Envoyer la demande</button></div></div>';
   c.innerHTML=html;selPlanName='100 Go';
 }
@@ -336,7 +336,7 @@ function showProrataPayment(){
     +'<label class="inp-label">Nom de l envoyeur</label><input class="inp" type="text" id="prorata-ref" placeholder="Ex: Rakoto Jean">'
     +'<label class="inp-label">Photo du recu</label>'
     +'<div class="upload-zone" id="prorata-upload-zone" onclick="document.getElementById(\'pp-photo\').click()"><div class="upload-icon">📷</div><div class="upload-text">Ajouter une photo</div><input type="file" id="pp-photo" accept="image/*" style="display:none" onchange="previewProrataPhoto()"></div>'
-    +'<div id="pp-preview" style="display:none;margin-bottom:12px"><img id="pp-img" style="width:100%;border-radius:12px;max-height:180px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removeProrataPhoto()">🗑 Supprimer</button></div>'
+    +'<div id="pp-preview" style="display:none;margin-bottom:12px"><img id="pp-img" style="width:100%;border-radius:12px;max-height:180px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removeProrataPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button></div>'
     +'<button class="btn btn-primary btn-full" onclick="submitProrata(\''+newDay+'\',\''+amount+'\',\''+nextDate+'\')">📤 Envoyer la demande prorata</button>'
     +'<button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>'
   );
@@ -502,9 +502,9 @@ function renderClientProfil(){
   html+='<div class="info-row"><div class="info-key">📅 Debut</div><div class="info-val">'+fmtDate(u.start_date)+'</div></div>';
   html+='<div class="info-row"><div class="info-key">📅 Fin</div><div class="info-val">'+(u.expiry_date?fmtDate(u.expiry_date)+' a 23h59':'—')+'</div></div>';
   html+='<div class="info-row"><div class="info-key">🗓 Membre depuis</div><div class="info-val">'+fmtDate(u.join_date)+'</div></div></div>';
-  html+='<div class="section-card"><div class="section-head">🎁 Parrainage</div><p style="font-size:12px;color:var(--text2);margin-bottom:10px">Invitez vos amis avec votre code et faites decouvrir NTY Starnet !</p><div style="display:flex;gap:8px"><div class="ticket-preview-big" style="flex:1;padding:10px"><div class="tp-label">VOTRE CODE</div><div class="tp-code" style="font-size:18px">'+u.username.toUpperCase()+'</div></div></div><a href="https://wa.me/?text='+encodeURIComponent('Salut ! Utilise mon code '+u.username.toUpperCase()+' pour t inscrire chez NTY Starnet 🌐 : '+location.origin+'/inscription.html')+'" target="_blank" class="btn btn-success btn-full" style="margin-top:10px">📤 Partager sur WhatsApp</a></div>';
-  html+='<div class="section-card"><div class="section-head">🎨 Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Choisissez votre couleur preferee</p>'+paletteSwatches()+'</div>';
-  html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe</button></div>';
+  html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Parrainage</div><p style="font-size:12px;color:var(--text2);margin-bottom:10px">Invitez vos amis avec votre code et faites decouvrir NTY Starnet !</p><div style="display:flex;gap:8px"><div class="ticket-preview-big" style="flex:1;padding:10px"><div class="tp-label">VOTRE CODE</div><div class="tp-code" style="font-size:18px">'+u.username.toUpperCase()+'</div></div></div><a href="https://wa.me/?text='+encodeURIComponent('Salut ! Utilise mon code '+u.username.toUpperCase()+' pour t inscrire chez NTY Starnet 🌐 : '+location.origin+'/inscription.html')+'" target="_blank" class="btn btn-success btn-full" style="margin-top:10px">📤 Partager sur WhatsApp</a></div>';
+  html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><path d="M12 2a10 10 0 1 0 0 20c1.5 0 2-1 2-2s-.5-1.3-.5-2.3S14.5 16 15.5 16H17a4 4 0 0 0 4-4c0-5.5-4.5-10-9-10z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="11" cy="7.3" r="1"/><circle cx="15.5" cy="8" r="1"/><circle cx="17.5" cy="11.5" r="1"/></svg>Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Choisissez votre couleur preferee</p>'+paletteSwatches()+'</div>';
+  html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe</button></div>';
   html+='<button class="btn btn-ghost btn-full" style="margin-top:8px" id="install-btn" onclick="installApp()" style="display:none">📲 Installer l app sur mon telephone</button>';
   html+='<button class="btn btn-danger btn-full" style="margin-top:8px" onclick="logout()">🚪 Se deconnecter</button></div>';
   c.innerHTML=html;
@@ -586,7 +586,7 @@ async function renderAdminDashboard(){
 
     // Paiements en attente avec tag ABONNEMENT/PRORATA
     if(pPending.length>0){
-      html+='<div class="section-card"><div class="section-head-row"><div class="section-head">🔔 Paiements en attente</div><span class="count-badge">'+pPending.length+'</span></div>';
+      html+='<div class="section-card"><div class="section-head-row"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Paiements en attente</div><span class="count-badge">'+pPending.length+'</span></div>';
       const freeT=await sbGet('tickets','is_used=eq.false&order=created_at.asc');
       const nextByClient={};freeT.forEach(t=>{if(!nextByClient[t.client_id])nextByClient[t.client_id]=t;});
       pPending.forEach(p=>{
@@ -619,11 +619,11 @@ async function renderAdminDashboard(){
     const days7=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days7.push(d.toISOString().slice(0,10));}
     const dayRevenue=days7.map(ds=>payments.filter(p=>p.status==='validated'&&p.payment_date===ds).reduce((s,p)=>s+(parseInt((p.amount||'0').replace(/\./g,''))||0),0));
     const maxRev=Math.max(...dayRevenue,1);
-    html+='<div class="section-card"><div class="section-head">📈 Revenus — 7 derniers jours</div><div style="display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:8px">';
+    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><polyline points="22 6 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 6 22 6 22 12"/></svg>Revenus — 7 derniers jours</div><div style="display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:8px">';
     days7.forEach((ds,i)=>{
       const h=Math.max(4,Math.round(dayRevenue[i]/maxRev*80));
       const lbl=new Date(ds).toLocaleDateString('fr-FR',{weekday:'short'}).slice(0,3);
-      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:'+h+'px;background:linear-gradient(180deg,#a78bfa,#8b5cf6);border-radius:4px 4px 0 0;transition:height 0.5s ease" title="'+dayRevenue[i].toLocaleString('fr')+' Ar"></div><div style="font-size:9px;color:var(--text3)">'+lbl+'</div></div>';
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:'+h+'px;background:linear-gradient(180deg,#8b5cf6,#7c3aed);border-radius:4px 4px 0 0;transition:height 0.5s ease" title="'+dayRevenue[i].toLocaleString('fr')+' Ar"></div><div style="font-size:9px;color:var(--text3)">'+lbl+'</div></div>';
     });
     html+='</div></div>';
 
@@ -636,7 +636,7 @@ async function renderAdminDashboard(){
     }).sort((a,b)=>new Date(a.expiry_date)-new Date(b.expiry_date));
 
     if(thisWeek.length>0){
-      html+='<div class="section-card"><div class="section-head">📅 Renouvellements cette semaine</div>';
+      html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Renouvellements cette semaine</div>';
       thisWeek.forEach(x=>{
         const dl=daysLeft(x.expiry_date);
         const urgColor=dl<=2?'var(--danger2)':dl<=4?'var(--warning2)':'var(--accent2)';
@@ -647,7 +647,7 @@ async function renderAdminDashboard(){
 
     // Expirent bientot (5 jours)
     if(soon.length>0){
-      html+='<div class="section-card"><div class="section-head">⏰ Expirent dans 5 jours ou moins</div>';
+      html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Expirent dans 5 jours ou moins</div>';
       soon.forEach(x=>{const dl=daysLeft(x.expiry_date);html+='<div class="info-row"><div class="info-key"><div style="font-weight:600">'+x.name+'</div><div style="font-size:11px;color:var(--text3)">'+x.plan+' · expire le '+fmtDate(x.expiry_date)+'</div></div><div class="info-val" style="color:var(--warning);font-family:var(--mono);font-weight:700">'+dl+'j</div></div>';});
       html+='</div>';
     }
@@ -763,7 +763,7 @@ async function renderAdminPaiements(filter='pending'){
         html+='<div class="pay-card-btns"><button class="btn btn-success" style="flex:2;padding:10px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div>';
       }
       if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:12px&quot;>\')">📷 Voir la preuve</button>';
-      if(p.status!=='pending')html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deletePayment(\''+p.id+'\')">🗑 Supprimer</button>';
+      if(p.status!=='pending')html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deletePayment(\''+p.id+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
@@ -872,7 +872,7 @@ async function openDetail(id){
 
     if(cl.plan==='100 Go'||cl.plan==='200 Go'){
       const cp=cl.consumption_pct||0;
-      const gaugeCol=cp>=90?'linear-gradient(90deg,#f87171,#ef4444)':cp>=75?'linear-gradient(90deg,#fbbf24,#f59e0b)':cp>=50?'linear-gradient(90deg,#a78bfa,#8b5cf6)':'linear-gradient(90deg,#34d399,#10b981)';
+      const gaugeCol=cp>=90?'linear-gradient(90deg,#f87171,#ef4444)':cp>=75?'linear-gradient(90deg,#fbbf24,#f59e0b)':cp>=50?'linear-gradient(90deg,#8b5cf6,#7c3aed)':'linear-gradient(90deg,#34d399,#10b981)';
       html+='<div class="divider"></div><div class="inp-label">📊 Consommation ('+cl.plan+')</div>';
       html+='<div style="height:20px;border-radius:10px;background:rgba(255,255,255,0.06);overflow:hidden;margin-bottom:10px;position:relative"><div style="height:100%;width:'+cp+'%;background:'+gaugeCol+';border-radius:10px;transition:width 0.6s cubic-bezier(0.34,1.2,0.64,1)"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5)">'+cp+'% utilise</div></div>';
       html+='<div style="display:flex;gap:8px;margin-bottom:8px">';
@@ -881,7 +881,7 @@ async function openDetail(id){
     }
 
     html+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'active\')">✓ Activer</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'expired\')">✗ Expirer</button></div>';
-    html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')">🗑 Supprimer</button></div>';
+    html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button></div>';
 
     // Tickets tab
     html+='<div id="dt-tickets" style="display:none"><label class="inp-label">Ajouter tickets (un par ligne)</label><textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ"></textarea><button class="btn btn-success btn-full" onclick="addMoreTickets(\''+id+'\')">+ Ajouter</button><div style="margin-top:12px">';
@@ -1012,9 +1012,9 @@ async function renderAdminStats(){
     [{l:'Actifs',v:clients.filter(x=>x.status==='active').length,col:'var(--success)'},{l:'En attente',v:clients.filter(x=>x.status==='pending').length,col:'var(--warning)'},{l:'Expires',v:clients.filter(x=>x.status==='expired').length,col:'var(--danger)'}].forEach(s=>{const pct=Math.round(s.v/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+s.l+'</span><span class="prog-val">'+s.v+' ('+pct+'%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+s.col+'"></div></div></div>';});
     html+='</div>';
     if(Object.keys(planCount).length>0){html+='<div class="section-card"><div class="section-head">Par plan</div>';Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});html+='</div>';}
-    html+='<div class="section-card"><div class="section-head">🔐 Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
-    html+='<div class="section-card"><div class="section-head">🎨 Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Couleur d accent de l application</p>'+paletteSwatches()+'</div>';
-    html+='<div class="section-card"><div class="section-head">🗑️ Cache & Stockage</div><button class="btn btn-ghost btn-full" onclick="showCacheManager()">Gérer le cache de l application</button></div>';
+    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
+    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><path d="M12 2a10 10 0 1 0 0 20c1.5 0 2-1 2-2s-.5-1.3-.5-2.3S14.5 16 15.5 16H17a4 4 0 0 0 4-4c0-5.5-4.5-10-9-10z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="11" cy="7.3" r="1"/><circle cx="15.5" cy="8" r="1"/><circle cx="17.5" cy="11.5" r="1"/></svg>Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Couleur d accent de l application</p>'+paletteSwatches()+'</div>';
+    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Cache & Stockage</div><button class="btn btn-ghost btn-full" onclick="showCacheManager()">Gérer le cache de l application</button></div>';
     html+='<button class="btn btn-ghost btn-full" id="install-btn-admin" onclick="installApp()" style="display:none">📲 Installer l app sur cet appareil</button>';
     html+='</div>';c.innerHTML=html;
     if(window.ntyDeferredPrompt){const ib=document.getElementById('install-btn-admin');if(ib)ib.style.display='flex';}
@@ -1089,7 +1089,7 @@ async function exportClientsExcel(){
       let t=`
 <!-- ZONE ${zoneName.toUpperCase()} -->
 <tr>
-  <td colspan="10" style="background:#1e3a5f;color:#a78bfa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #8b5cf6">
+  <td colspan="10" style="background:#1e3a5f;color:#8b5cf6;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #7c3aed">
     📍 ${zoneName} &nbsp;·&nbsp; ${list.length} client(s)
   </td>
 </tr>
@@ -1116,7 +1116,7 @@ async function exportClientsExcel(){
         t+=`<tr style="background:${bg}">
   <td style="padding:9px 12px;color:#64748b;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600">${i+1}</td>
   <td style="padding:9px 12px;font-weight:700;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b">${c.name||'—'}</td>
-  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#8b5cf6;font-family:Courier New,monospace">@${c.username||'—'}</td>
+  <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#7c3aed;font-family:Courier New,monospace">@${c.username||'—'}</td>
   <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b;font-weight:500">${c.plan||'—'}</td>
   <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f766e;font-family:Courier New,monospace">${(c.plan_price||'—')} Ar</td>
   <td style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;background:${statusBg};color:${statusColor};font-weight:700">${status}</td>
@@ -1133,7 +1133,7 @@ async function exportClientsExcel(){
     // Tableau récapitulatif des abonnements
     html+=`
 <tr>
-  <td colspan="10" style="background:#0f2a4a;color:#a78bfa;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #10b981">
+  <td colspan="10" style="background:#0f2a4a;color:#8b5cf6;font-size:12pt;font-weight:bold;padding:10px 16px;letter-spacing:1px;border-left:4px solid #10b981">
     📊 RÉCAPITULATIF DES ABONNEMENTS
   </td>
 </tr>
@@ -1149,7 +1149,7 @@ async function exportClientsExcel(){
       const activeCount=clients.filter(c=>c.plan===plan&&c.status==='active').length;
       html+=`<tr style="background:${bg}">
   <td colspan="3" style="padding:9px 12px;font-weight:700;font-size:10pt;border:1px solid #e2e8f0;color:#1e293b">${plan}</td>
-  <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#8b5cf6">${data.count} client(s)</td>
+  <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#7c3aed">${data.count} client(s)</td>
   <td colspan="2" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:#10b981">${activeCount} actif(s)</td>
   <td colspan="3" style="padding:9px 12px;font-size:10pt;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f766e;font-family:Courier New,monospace">${data.revenue.toLocaleString('fr')} Ar</td>
 </tr>`;
@@ -1222,7 +1222,7 @@ async function exportClientsPDF(){
   .header::before{content:'';position:absolute;top:-60px;right:-60px;width:250px;height:250px;background:radial-gradient(circle,rgba(59,130,246,0.2),transparent);border-radius:50%}
   .header::after{content:'';position:absolute;bottom:-40px;left:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(139,92,246,0.15),transparent);border-radius:50%}
   .header-top{display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;z-index:1}
-  .header-logo{width:56px;height:56px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 25px rgba(59,130,246,0.4)}
+  .header-logo{width:56px;height:56px;background:linear-gradient(135deg,#1d4ed8,#6d28d9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 25px rgba(59,130,246,0.4)}
   .header-title{font-size:26px;font-weight:800;color:#fff;letter-spacing:2px}
   .header-sub{font-size:12px;color:#93c5fd;letter-spacing:1px;margin-top:3px;text-transform:uppercase}
   .header-meta{position:relative;z-index:1;display:flex;gap:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)}
@@ -1263,7 +1263,7 @@ async function exportClientsPDF(){
   td.username{font-family:'JetBrains Mono',monospace;color:#3b82f6;font-size:11px}
   td.plan{font-weight:600;color:#1e293b}
   td.price{font-family:'JetBrains Mono',monospace;font-weight:700;color:#0d9488;text-align:right}
-  td.ip{font-family:'JetBrains Mono',monospace;color:#7c3aed;font-size:11px}
+  td.ip{font-family:'JetBrains Mono',monospace;color:#6d28d9;font-size:11px}
   td.date{color:#64748b;font-size:11px;text-align:center}
   td.phone{font-family:'JetBrains Mono',monospace;font-size:11px;color:#475569}
   .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.03em}
@@ -1465,7 +1465,7 @@ async function renderAdminInscriptions(){
       html+='<div class="inscr-card '+(isPending?'inscr-pending':'inscr-done')+'">';
       html+='<div class="inscr-top"><div><div class="inscr-name">'+ins.name+'</div><div class="inscr-meta">📞 '+(ins.phone||'—')+' · 📍 '+(ins.zone||'—')+'</div>'+(ins.address?'<div class="inscr-meta">🏠 '+ins.address+'</div>':'')+(ins.message?'<div class="inscr-msg">💬 '+ins.message+'</div>':'')+'</div><div style="text-align:right"><span class="badge badge-'+(isPending?'pending':'active')+'">'+(isPending?'⏳ En attente':'✅ Traite')+'</span><div class="inscr-date">'+fmtDate(ins.created_at)+'</div></div></div>';
       if(isPending)html+='<div class="inscr-btns"><button class="btn btn-success" style="flex:2;padding:9px;margin:0;font-size:12px" onclick="acceptInscription(\''+ins.id+'\',\''+ins.name+'\',\''+(ins.phone||'')+'\',\''+(ins.zone||'')+'\')">✓ Accepter et creer le compte</button><button class="btn btn-danger" style="flex:1;padding:9px;margin:0;font-size:12px" onclick="rejectInscription(\''+ins.id+'\')">✗ Refuser</button></div>';
-      if(!isPending)html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deleteInscription(\''+ins.id+'\')">🗑 Supprimer</button>';
+      if(!isPending)html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deleteInscription(\''+ins.id+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button>';
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
@@ -1603,7 +1603,7 @@ function fallbackCopy(text){
 
 // CONFETTIS & EASTER EGG
 function launchConfetti(){
-  const colors=['#8b5cf6','#a78bfa','#34d399','#fbbf24','#d946ef','#f87171'];
+  const colors=['#7c3aed','#8b5cf6','#34d399','#fbbf24','#4338ca','#f87171'];
   const container=document.createElement('div');container.className='confetti-container';document.body.appendChild(container);
   for(let i=0;i<60;i++){const cc=document.createElement('div');cc.className='confetti-piece';cc.style.left=Math.random()*100+'%';cc.style.background=colors[Math.floor(Math.random()*colors.length)];cc.style.animationDelay=(Math.random()*0.4)+'s';cc.style.animationDuration=(2+Math.random()*1.5)+'s';cc.style.width=cc.style.height=(6+Math.random()*6)+'px';cc.style.borderRadius=Math.random()>0.5?'50%':'2px';container.appendChild(cc);}
   setTimeout(()=>container.remove(),3500);
@@ -1715,7 +1715,7 @@ function installApp(){
 document.addEventListener('DOMContentLoaded',()=>{
   initStars();
   const isLight=document.documentElement.getAttribute('data-theme')==='light';
-  ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.textContent=isLight?'☀️':'🌙';});
+  ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.innerHTML=isLight?`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;});
   // Cacher le splash après 2.2 secondes
   setTimeout(hideSplash, 2200);
   // Connexion rapide - remplir le username sauvegardé
