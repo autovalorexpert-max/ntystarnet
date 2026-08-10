@@ -1,5 +1,36 @@
 const SB_URL='https://bpeliducuuagffwlsjal.supabase.co';
 
+// ═══ FRAIS DE RETRAIT MOBILE MONEY (Madagascar) ═══
+// Sources : mvola.mg/tarifs (officiel), momocalc.com (verifie juin 2026)
+// Airtel Money : grille non publiee officiellement -> traite en verification manuelle systematique
+const FRAIS_RETRAIT_MVOLA=[
+  {max:1000,frais:100},{max:5000,frais:150},{max:10000,frais:275},
+  {max:20000,frais:550},{max:25000,frais:650},{max:50000,frais:1300},
+  {max:100000,frais:1900},{max:250000,frais:3400},{max:500000,frais:4700},
+  {max:1000000,frais:8800}
+];
+const FRAIS_RETRAIT_ORANGE=[
+  {max:1000,frais:0},{max:5000,frais:200},{max:10000,frais:350},
+  {max:25000,frais:700},{max:100000,frais:2000},{max:500000,frais:5000},
+  {max:Infinity,frais:9500}
+];
+function calcFraisRetrait(montant,operateur){
+  if(operateur==='airtel')return null; // grille inconnue -> pas de calcul automatique
+  const table=operateur==='orange'?FRAIS_RETRAIT_ORANGE:FRAIS_RETRAIT_MVOLA;
+  for(const palier of table){if(montant<=palier.max)return palier.frais;}
+  return table[table.length-1].frais;
+}
+function calcMontantTotal(prixPlan,operateur){
+  if(operateur==='airtel')return null;
+  // Le frais depend du montant TOTAL retire (prix+frais) ; les paliers etant larges,
+  // une seule iteration suffit pour ces montants (pas de changement de palier)
+  let frais=calcFraisRetrait(prixPlan,operateur);
+  let total=prixPlan+frais;
+  const frais2=calcFraisRetrait(total,operateur);
+  if(frais2!==frais)total=prixPlan+frais2; // ajuste si le total franchit un palier
+  return total;
+}
+
 // ═══ THEME & PALETTE (applique immediatement pour eviter le flash) ═══
 const NTY_PALETTES={
   blue:{a:'#3b82f6',a2:'#60a5fa',a3:'#93c5fd'},
@@ -279,9 +310,15 @@ function renderClientPaiement(){
 
   html+='<div class="pay-box"><div class="pay-box-title">📲 Paiement Mobile Money</div>';
   nums.forEach(num=>{html+='<div class="pay-num-row"><div class="pay-num">'+num.n+'</div><div class="pay-num-name">'+num.name+'</div></div>';});
-  html+='<div class="pay-box-warn">⚠️ Frais de retrait a votre charge — envoyez le montant exact + frais.</div></div>';
+  html+='<div class="pay-box-warn">⚠️ Les frais de retrait sont OBLIGATOIRES en plus du prix du plan. Choisissez votre operateur ci-dessous pour voir le montant exact a envoyer.</div></div>';
   html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Renouveler l abonnement</div>';
-  plans.forEach((pl,i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+pl.n+'\')"><div class="plan-icon">'+pl.icon+'</div><div class="plan-info"><div class="plan-name">'+pl.n+'</div><div class="plan-desc">'+pl.d+'</div></div><div class="plan-price">'+pl.p+' Ar</div></div>';});
+  plans.forEach((pl,i)=>{html+='<div class="plan-card'+(i===0?' selected':'')+'" onclick="selPlan(this,\''+pl.n+'\',\''+pl.p+'\')" data-price="'+pl.p+'"><div class="plan-icon">'+pl.icon+'</div><div class="plan-info"><div class="plan-name">'+pl.n+'</div><div class="plan-desc">'+pl.d+'</div></div><div class="plan-price">'+pl.p+' Ar</div></div>';});
+  html+='<div class="divider" style="margin:14px 0"></div>';
+  html+='<label class="inp-label">Operateur utilise pour payer *</label>';
+  html+='<select class="inp" id="c-operateur" onchange="updateMontantTotal()">';
+  html+='<option value="mvola">Mvola / Yas</option><option value="orange">Orange Money</option><option value="airtel">Airtel Money</option>';
+  html+='</select>';
+  html+='<div id="montant-total-box" class="ticket-preview-big" style="margin-bottom:14px"></div>';
   html+='</div><div class="section-card"><div class="section-head">Details du paiement</div>';
   html+='<label class="inp-label">Date du paiement *</label><input class="inp" type="date" id="c-paydate" max="'+today()+'">';
   html+='<label class="inp-label">Nom de l envoyeur</label><input class="inp" type="text" id="c-payref" placeholder="Ex: Rakoto Jean">';
@@ -289,7 +326,7 @@ function renderClientPaiement(){
   html+='<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'c-photo\').click()"><div class="upload-icon">📷</div><div class="upload-text">Appuyer pour ajouter une photo</div><input type="file" id="c-photo" accept="image/*" style="display:none" onchange="previewPhoto()"></div>';
   html+='<div id="photo-preview" style="display:none;margin-bottom:12px"><img id="preview-img" style="width:100%;border-radius:12px;max-height:200px;object-fit:cover"><button class="btn btn-ghost" style="margin-top:8px" onclick="removePhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button></div>';
   html+='<button class="btn btn-primary btn-full" onclick="submitPay()">📤 Envoyer la demande</button></div></div>';
-  c.innerHTML=html;selPlanName='100 Go';
+  c.innerHTML=html;selPlanName='100 Go';updateMontantTotal();
 }
 
 function calcProrataDisplay(){
@@ -356,19 +393,143 @@ async function submitProrata(newDay,amount,nextDate){
   }catch(e){toast('Erreur lors de l envoi.','error');}
 }
 
-function selPlan(el,name){document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');selPlanName=name;}
+function selPlan(el,name,price){document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');selPlanName=name;updateMontantTotal();}
+function updateMontantTotal(){
+  const box=document.getElementById('montant-total-box');if(!box)return;
+  const selCard=document.querySelector('.plan-card.selected');
+  const prixStr=selCard?selCard.getAttribute('data-price'):'40.000';
+  const prix=parseInt(prixStr.replace(/\./g,''));
+  const op=document.getElementById('c-operateur')?document.getElementById('c-operateur').value:'mvola';
+  if(op==='airtel'){
+    box.innerHTML='<div class="tp-label">MONTANT DE BASE</div><div class="tp-code" style="font-size:20px">'+prixStr+' Ar</div><div style="font-size:11px;color:var(--warning2);margin-top:8px">⚠️ Frais Airtel non standardises : ajoutez les frais de retrait affiches lors de votre envoi (visibles avant validation sur votre telephone).</div>';
+    return;
+  }
+  const total=calcMontantTotal(prix,op);
+  const frais=total-prix;
+  box.innerHTML='<div class="tp-label">MONTANT TOTAL A ENVOYER</div><div class="tp-code" style="font-size:24px">'+total.toLocaleString('fr')+' Ar</div><div style="font-size:11px;color:var(--text3);margin-top:8px">('+prix.toLocaleString('fr')+' Ar plan + '+frais.toLocaleString('fr')+' Ar frais de retrait)</div>';
+}
 function previewPhoto(){const f=document.getElementById('c-photo').files[0];if(!f)return;const r=new FileReader();r.onload=e=>{photoData=e.target.result;document.getElementById('preview-img').src=photoData;document.getElementById('photo-preview').style.display='block';document.getElementById('upload-zone').style.display='none';};r.readAsDataURL(f);}
 function removePhoto(){photoData=null;document.getElementById('c-photo').value='';document.getElementById('photo-preview').style.display='none';document.getElementById('upload-zone').style.display='block';}
+// ═══ BOT DE VERIFICATION AUTOMATIQUE DES PAIEMENTS ═══
+async function hashImage(dataUrl){
+  try{
+    const base64=dataUrl.split(',')[1]||'';
+    const binary=atob(base64);
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    const hashBuffer=await crypto.subtle.digest('SHA-256',bytes);
+    return Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){return null;}
+}
+async function analyserCapturePaiement(dataUrl){
+  try{
+    const mediaType=(dataUrl.match(/data:([^;]+);/)||[])[1]||'image/jpeg';
+    const base64=dataUrl.split(',')[1];
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:400,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+          {type:'text',text:'Analyse cette capture d ecran de confirmation de paiement Mobile Money (Mvola/Yas, Orange Money ou Airtel Money) a Madagascar. Reponds UNIQUEMENT en JSON valide, sans aucun texte avant ni apres, format exact : {"lisible":true,"montant":12345,"operateur_detecte":"mvola","nom_expediteur":"texte","confiance":"haute"}. operateur_detecte doit etre "mvola","orange","airtel" ou null. confiance doit etre "haute","moyenne" ou "basse". Le montant doit etre uniquement le nombre en Ariary, sans texte ni symbole. Si la capture ne ressemble pas a une confirmation Mobile Money valide et lisible, mets lisible:false et montant:null.'}
+        ]}]
+      })
+    });
+    const data=await response.json();
+    const textBlock=(data.content||[]).find(b=>b.type==='text');
+    if(!textBlock)return null;
+    const txt=textBlock.text.trim().replace(/```json|```/g,'').trim();
+    return JSON.parse(txt);
+  }catch(e){return null;}
+}
+function showResultatEnvoi(type,a,b,c){
+  let html='<div style="text-align:center;padding:16px">';
+  if(type==='valide'){
+    html+='<div style="font-size:56px;margin-bottom:16px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Paiement verifie et valide !</div>';
+    html+='<p style="color:var(--text2);font-size:13px;margin-bottom:16px">Notre bot a verifie automatiquement votre paiement. Voici votre ticket :</p>';
+    html+='<div class="ticket-preview-big"><div class="tp-label">TICKET</div><div class="tp-code">'+a+'</div><div style="font-size:12px;color:var(--text3);margin-top:8px">Du '+fmtDateFull(b)+' au '+fmtDateFull(c)+'</div></div>';
+  }else if(type==='incomplet'){
+    html+='<div style="font-size:56px;margin-bottom:16px">⚠️</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Paiement incomplet</div>';
+    html+='<p style="color:var(--text2);font-size:13px;margin-bottom:16px">Il manque <strong style="color:var(--warning)">'+a.toLocaleString('fr')+' Ar</strong> (frais de retrait inclus).</p>';
+    html+='<div class="pay-box" style="text-align:left;margin-bottom:16px"><div class="pay-box-title">📲 Payez le complement sur</div><div class="pay-num-row"><div class="pay-num">0344127501</div><div class="pay-num-name">Rojo Rindra</div></div><div class="pay-num-row"><div class="pay-num">0346341775</div><div class="pay-num-name">Ny Tiana</div></div></div>';
+    html+='<p style="color:var(--text3);font-size:12px;margin-bottom:16px">Ou appelez directement l administrateur si besoin d aide.</p>';
+  }else{
+    html+='<div style="font-size:56px;margin-bottom:16px">📨</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande envoyee !</div>';
+    html+='<p style="color:var(--text2);font-size:13px;margin-bottom:20px">'+a+'</p>';
+  }
+  html+='<button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">OK ✓</button></div>';
+  showModal(html);
+}
 async function submitPay(){
   const d=document.getElementById('c-paydate').value;
   if(!d){toast('Veuillez indiquer la date du paiement.','error');return;}
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
+  if(!photoData){toast('Merci d ajouter une photo du recu.','error');return;}
+  const prices={'100 Go':40000,'200 Go':55000,'Illimite 6 appareils':65000,'Illimite 9+ appareils':90000};
+  const prix=prices[selPlanName];
+  const prixFmt=prix.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const operateur=document.getElementById('c-operateur').value;
+  const montantAttendu=operateur==='airtel'?null:calcMontantTotal(prix,operateur);
+  toast('📤 Envoi en cours, verification automatique...');
   try{
-    await sbPost('payments',{client_id:me.id,client_name:me.name,plan:selPlanName,amount:prices[selPlanName],payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData,payment_type:'abonnement'});
+    const photoHash=await hashImage(photoData);
+
+    const pendingExistants=await sbGet('payments','client_id=eq.'+me.id+'&plan=eq.'+encodeURIComponent(selPlanName)+'&status=eq.pending&payment_type=eq.abonnement&order=created_at.desc&limit=1').catch(()=>[]);
+    const estComplement=pendingExistants.length>0;
+    const montantDejaRecu=estComplement?(parseFloat(pendingExistants[0].montant_recu)||0):0;
+
+    let estDoublon=false;
+    if(photoHash){
+      const dejaUtilise=await sbGet('payments','photo_hash=eq.'+photoHash+'&status=eq.validated&limit=1').catch(()=>[]);
+      estDoublon=dejaUtilise.length>0;
+    }
+
+    const analyse=await analyserCapturePaiement(photoData);
+    const montantDetecte=analyse&&analyse.lisible&&typeof analyse.montant==='number'?analyse.montant:null;
+    const montantCumule=montantDejaRecu+(montantDetecte||0);
+
+    const payload={client_id:me.id,client_name:me.name,plan:selPlanName,amount:prixFmt,payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData,payment_type:'abonnement',photo_hash:photoHash,montant_recu:montantCumule,operateur:operateur};
+
+    let paymentId;
+    if(estComplement){
+      await sbPatch('payments','id=eq.'+pendingExistants[0].id,payload);
+      paymentId=pendingExistants[0].id;
+    }else{
+      const inserted=await sbPost('payments',payload);
+      paymentId=inserted&&inserted[0]?inserted[0].id:null;
+    }
+
     await sbPatch('clients','id=eq.'+me.id,{status:'pending'});me.status='pending';photoData=null;
-    launchConfetti();
-    showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:16px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande envoyee !</div><p style="color:var(--text2);font-size:13px;margin-bottom:20px">Merci ! L administrateur va valider et vous envoyer votre ticket Mikrotik.</p><button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">Genial, merci ! ✓</button></div>');
-  }catch(e){toast('Erreur lors de l envoi.','error');}
+
+    if(estDoublon){
+      await sbPost('messages',{client_id:me.id,sender:'admin',sender_name:'🤖 Verification automatique',content:'⚠️ Cette capture d ecran a deja servi pour un paiement precedent. Votre demande est transmise a l administrateur pour verification manuelle.'});
+      showResultatEnvoi('manuel','Votre demande a ete transmise a l administrateur pour verification.');
+    }else if(operateur==='airtel'){
+      showResultatEnvoi('manuel','Airtel Money necessite une verification manuelle. L administrateur va valider votre paiement rapidement.');
+    }else if(!analyse||!analyse.lisible||analyse.confiance==='basse'){
+      showResultatEnvoi('manuel','Votre demande a ete transmise a l administrateur pour verification manuelle.');
+    }else if(montantCumule>=montantAttendu-10){
+      const cT=await sbGet('tickets','client_id=eq.'+me.id+'&is_used=eq.false&order=created_at.asc&limit=1').catch(()=>[]);
+      const ticket=cT[0];
+      if(ticket){
+        const startDate=today();const endDate=addOneMonth(startDate);
+        await Promise.all([
+          sbPatch('payments','id=eq.'+paymentId,{status:'validated'}),
+          sbPatch('tickets','id=eq.'+ticket.id,{is_used:true,is_current:true}),
+          sbPatch('clients','id=eq.'+me.id,{status:'active',current_ticket:ticket.code,start_date:startDate,expiry_date:endDate}),
+          sbPost('messages',{client_id:me.id,sender:'admin',sender_name:'🤖 Verification automatique',content:'✅ Paiement verifie et valide automatiquement !\n\n🎫 Votre ticket : '+ticket.code+'\n\n📅 Valable du '+fmtDateFull(startDate)+' au '+fmtDateFull(endDate)+' a 23h59.'})
+        ]);
+        me.status='active';window.ntyClientsCache=null;
+        launchConfetti();
+        showResultatEnvoi('valide',ticket.code,startDate,endDate);
+      }else{
+        showResultatEnvoi('manuel','Paiement verifie mais aucun ticket disponible en stock. L administrateur va vous en envoyer un rapidement.');
+      }
+    }else{
+      const manque=Math.round(montantAttendu-montantCumule);
+      await sbPost('messages',{client_id:me.id,sender:'admin',sender_name:'🤖 Verification automatique',content:'⚠️ Paiement incomplet detecte.\n\nMontant recu : '+Math.round(montantCumule).toLocaleString('fr')+' Ar\nMontant attendu : '+montantAttendu.toLocaleString('fr')+' Ar\n\nIl manque '+manque.toLocaleString('fr')+' Ar (frais de retrait inclus).\n\n👉 Payez le complement, ou appelez :\n📞 0344127501 (Rojo Rindra)\n📞 0346341775 (Ny Tiana)'});
+      showResultatEnvoi('incomplet',manque);
+    }
+  }catch(e){toast('Erreur lors de l envoi.','error');console.error(e);}
 }
 
 // CLIENT MESSAGES
@@ -757,6 +918,7 @@ async function renderAdminPaiements(filter='pending'){
       const typeTag=isProrata?'<span class="tag-prorata">📅 PRORATA</span>':'<span class="tag-abo">🔄 ABONNEMENT</span>';
       const next=(!isProrata&&p.status==='pending')?nextByClient[p.client_id]:null;
       html+='<div class="pay-card"><div class="pay-card-top"><div><div class="pay-card-name">'+p.client_name+' '+typeTag+'</div><div class="pay-card-sub">'+p.plan+' · '+fmtDate(p.payment_date)+'</div><div class="pay-card-ref">Ref: '+(p.reference||'—')+'</div></div><div class="pay-card-right"><div class="pay-card-amount">'+(p.amount||'—')+' Ar</div><span class="badge badge-'+p.status+'">'+({validated:'✅ Valide',pending:'⏳ En attente',rejected:'❌ Refuse'}[p.status])+'</span></div></div>';
+      if(p.montant_recu)html+='<div style="font-size:11px;color:var(--text3);margin-top:4px">🤖 Bot a detecte : '+Math.round(p.montant_recu).toLocaleString('fr')+' Ar reels'+(p.operateur?' · '+p.operateur:'')+'</div>';
       if(p.status==='pending'){
         if(!isProrata)html+=(next?'<div class="ticket-preview">🎫 Prochain ticket: <strong>'+next.code+'</strong></div>':'<div class="ticket-preview" style="color:var(--danger)">⚠️ Aucun ticket disponible</div>');
         if(isProrata)html+='<div class="ticket-preview">📅 Nouvelle date: le <strong>'+p.prorata_new_day+'</strong> de chaque mois · Valable jusqu au <strong>'+fmtDate(p.prorata_next_date)+'</strong></div>';
