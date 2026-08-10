@@ -430,7 +430,8 @@ async function analyserCapturePaiement(dataUrl){
     const avgConf=words.length?words.reduce((s,w)=>s+w.confidence,0)/words.length:0;
 
     // Extraire le premier montant suivi de "Ar" (format Mvola/Orange/Airtel : le montant envoye apparait en premier)
-    const matches=[...text.matchAll(/(\d[\d\s.,]{2,})\s*(?:Ar|AR|ar)\b/g)];
+    // Montant realiste : 3 a 7 chiffres max, groupes separes par au plus un espace/point (evite de fusionner date+montant+ref par erreur)
+    const matches=[...text.matchAll(/\b(\d{2,3}(?:[ .]\d{3}){0,2})\s*(?:Ar|AR|ar)\b/g)];
     let montant=null;
     if(matches.length>0){
       const raw=matches[0][1].replace(/[\s.,]/g,'');
@@ -515,6 +516,10 @@ async function submitPay(){
     }else if(operateur==='airtel'){
       showResultatEnvoi('manuel','Airtel Money necessite une verification manuelle. L administrateur va valider votre paiement rapidement.');
     }else if(!analyse||!analyse.lisible||analyse.confiance==='basse'){
+      showResultatEnvoi('manuel','Votre demande a ete transmise a l administrateur pour verification manuelle.');
+    }else if(montantCumule>montantAttendu*3){
+      // Garde-fou anti-erreur de lecture : un montant absurdement plus eleve que prevu = erreur OCR, pas un vrai paiement
+      await sbPost('messages',{client_id:me.id,sender:'admin',sender_name:'🤖 Verification automatique',content:'⚠️ Le montant lu sur votre capture semble inhabituel. Votre demande est transmise a l administrateur pour verification manuelle.'});
       showResultatEnvoi('manuel','Votre demande a ete transmise a l administrateur pour verification manuelle.');
     }else if(montantCumule>=montantAttendu-10){
       const cT=await sbGet('tickets','client_id=eq.'+me.id+'&is_used=eq.false&order=created_at.asc&limit=1').catch(()=>[]);
