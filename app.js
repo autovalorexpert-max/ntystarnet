@@ -423,23 +423,32 @@ async function hashImage(dataUrl){
 }
 async function analyserCapturePaiement(dataUrl){
   try{
-    const mediaType=(dataUrl.match(/data:([^;]+);/)||[])[1]||'image/jpeg';
-    const base64=dataUrl.split(',')[1];
-    const response=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',max_tokens:400,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
-          {type:'text',text:'Analyse cette capture d ecran de confirmation de paiement Mobile Money (Mvola/Yas, Orange Money ou Airtel Money) a Madagascar. Reponds UNIQUEMENT en JSON valide, sans aucun texte avant ni apres, format exact : {"lisible":true,"montant":12345,"operateur_detecte":"mvola","nom_expediteur":"texte","confiance":"haute"}. operateur_detecte doit etre "mvola","orange","airtel" ou null. confiance doit etre "haute","moyenne" ou "basse". Le montant doit etre uniquement le nombre en Ariary, sans texte ni symbole. Si la capture ne ressemble pas a une confirmation Mobile Money valide et lisible, mets lisible:false et montant:null.'}
-        ]}]
-      })
-    });
-    const data=await response.json();
-    const textBlock=(data.content||[]).find(b=>b.type==='text');
-    if(!textBlock)return null;
-    const txt=textBlock.text.trim().replace(/```json|```/g,'').trim();
-    return JSON.parse(txt);
+    if(typeof Tesseract==='undefined')return null;
+    const result=await Tesseract.recognize(dataUrl,'fra',{});
+    const text=result.data.text||'';
+    const words=result.data.words||[];
+    const avgConf=words.length?words.reduce((s,w)=>s+w.confidence,0)/words.length:0;
+
+    // Extraire le premier montant suivi de "Ar" (format Mvola/Orange/Airtel : le montant envoye apparait en premier)
+    const matches=[...text.matchAll(/(\d[\d\s.,]{2,})\s*(?:Ar|AR|ar)\b/g)];
+    let montant=null;
+    if(matches.length>0){
+      const raw=matches[0][1].replace(/[\s.,]/g,'');
+      const n=parseInt(raw);
+      if(!isNaN(n)&&n>100&&n<10000000)montant=n;
+    }
+
+    // Detecter l operateur via mots-cles dans le texte reconnu
+    const lower=text.toLowerCase();
+    let operateur_detecte=null;
+    if(lower.includes('mvola')||lower.includes('yas'))operateur_detecte='mvola';
+    else if(lower.includes('orange'))operateur_detecte='orange';
+    else if(lower.includes('airtel'))operateur_detecte='airtel';
+
+    const lisible=montant!==null&&avgConf>40;
+    const confiance=avgConf>70?'haute':avgConf>45?'moyenne':'basse';
+
+    return {lisible,montant,operateur_detecte,nom_expediteur:null,confiance};
   }catch(e){return null;}
 }
 function showResultatEnvoi(type,a,b,c){
@@ -469,7 +478,7 @@ async function submitPay(){
   const prixFmt=prix.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   const operateur=document.getElementById('c-operateur').value;
   const montantAttendu=operateur==='airtel'?null:calcMontantTotal(prix,operateur);
-  toast('📤 Envoi en cours, verification automatique...');
+  toast('📤 Envoi en cours, verification automatique (quelques secondes)...');
   try{
     const photoHash=await hashImage(photoData);
 
@@ -919,6 +928,7 @@ async function renderAdminPaiements(filter='pending'){
       const next=(!isProrata&&p.status==='pending')?nextByClient[p.client_id]:null;
       html+='<div class="pay-card"><div class="pay-card-top"><div><div class="pay-card-name">'+p.client_name+' '+typeTag+'</div><div class="pay-card-sub">'+p.plan+' · '+fmtDate(p.payment_date)+'</div><div class="pay-card-ref">Ref: '+(p.reference||'—')+'</div></div><div class="pay-card-right"><div class="pay-card-amount">'+(p.amount||'—')+' Ar</div><span class="badge badge-'+p.status+'">'+({validated:'✅ Valide',pending:'⏳ En attente',rejected:'❌ Refuse'}[p.status])+'</span></div></div>';
       if(p.montant_recu)html+='<div style="font-size:11px;color:var(--text3);margin-top:4px">🤖 Bot a detecte : '+Math.round(p.montant_recu).toLocaleString('fr')+' Ar reels'+(p.operateur?' · '+p.operateur:'')+'</div>';
+      else if(p.status==='pending'&&p.operateur)html+='<div style="font-size:11px;color:var(--warning2);margin-top:4px">🤖 Bot n a pas pu lire le montant sur la capture — verification manuelle necessaire</div>';
       if(p.status==='pending'){
         if(!isProrata)html+=(next?'<div class="ticket-preview">🎫 Prochain ticket: <strong>'+next.code+'</strong></div>':'<div class="ticket-preview" style="color:var(--danger)">⚠️ Aucun ticket disponible</div>');
         if(isProrata)html+='<div class="ticket-preview">📅 Nouvelle date: le <strong>'+p.prorata_new_day+'</strong> de chaque mois · Valable jusqu au <strong>'+fmtDate(p.prorata_next_date)+'</strong></div>';
