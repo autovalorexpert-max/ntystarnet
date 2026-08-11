@@ -1493,8 +1493,20 @@ setTimeout(window.hideSplash,2000);
       </div>
     </div>
 
+    <!-- Ecran PIN rapide -->
+    <div class="login-card fade-up" id="pin-screen" style="display:none;animation-delay:0.2s">
+      <div class="login-card-header">
+        <div class="login-card-icon">🔒</div>
+        <div><div class="login-title">Code PIN</div><div class="login-sub" id="pin-screen-user"></div></div>
+      </div>
+      <input class="inp" type="password" inputmode="numeric" maxlength="4" id="pin-input" placeholder="• • • •" style="text-align:center;font-size:24px;letter-spacing:12px" autofocus>
+      <div id="pin-err" style="display:none;color:var(--danger2);font-size:12px;margin-bottom:10px">Code incorrect</div>
+      <button class="btn btn-login btn-full" onclick="doPinLogin()">Deverrouiller <span>→</span></button>
+      <button class="btn btn-ghost btn-full" style="margin-top:10px" onclick="usePasswordInstead()">Utiliser mot de passe / autre compte</button>
+    </div>
+
     <!-- Card connexion -->
-    <div class="login-card fade-up" style="animation-delay:0.2s">
+    <div class="login-card fade-up" id="classic-login-card" style="animation-delay:0.2s">
       <div class="login-card-glow"></div>
       <div class="login-card-header">
         <div class="login-card-icon">🔐</div>

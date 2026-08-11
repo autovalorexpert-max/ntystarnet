@@ -179,15 +179,68 @@ async function doLogin(){
   localStorage.setItem('nty_remember_user',u);
   try{
     const admins=await sbGet('admins','username=eq.'+u+'&password=eq.'+p);
-    if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';hideSplash();showPage('page-admin');checkExpiredClients();aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
+    if(admins.length>0){me={...admins[0],role:'admin'};err.style.display='none';hideSplash();showPage('page-admin');checkExpiredClients();aPage('dashboard',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;proposerPinRapide(u,p);return;}
     const clients=await sbGet('clients','username=eq.'+u+'&password=eq.'+p);
-    if(clients.length>0){me={...clients[0],role:'client'};err.style.display='none';hideSplash();showPage('page-client');checkExpiredClient(clients[0]);cPage('home',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;return;}
+    if(clients.length>0){me={...clients[0],role:'client'};err.style.display='none';hideSplash();showPage('page-client');checkExpiredClient(clients[0]);cPage('home',null);btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;proposerPinRapide(u,p);return;}
     err.style.display='flex';err.querySelector('.err-msg').textContent='Identifiants incorrects';
   }catch(e){err.style.display='flex';err.querySelector('.err-msg').textContent='Erreur de connexion. Reessayez.';}
   btn.innerHTML='Se connecter <span>→</span>';btn.disabled=false;
 }
-function logout(){me=null;document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('login-err').style.display='none';showPage('page-login');}
+function logout(){me=null;document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('login-err').style.display='none';showPage('page-login');afficherEcranLoginApproprie();}
 function togglePass(){const i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password';}
+
+// ═══ CODE PIN RAPIDE ═══
+function proposerPinRapide(username,password){
+  const dejaConfigure=localStorage.getItem('nty_quick_pin');
+  if(dejaConfigure)return; // deja configure, ne pas redemander
+  setTimeout(()=>{
+    if(!confirm('Activer un code PIN a 4 chiffres pour deverrouiller l app plus vite la prochaine fois (sur cet appareil uniquement) ?'))return;
+    const pin=prompt('Choisissez un code a 4 chiffres :');
+    if(!pin||!/^\d{4}$/.test(pin)){toast('Code invalide, PIN non active.','error');return;}
+    localStorage.setItem('nty_quick_pin',JSON.stringify({u:username,p:password,pin:pin}));
+    toast('🔒 Code PIN active !');
+  },800);
+}
+function afficherEcranLoginApproprie(){
+  const saved=localStorage.getItem('nty_quick_pin');
+  const pinScreen=document.getElementById('pin-screen');
+  const classicCard=document.getElementById('classic-login-card');
+  if(!pinScreen||!classicCard)return;
+  if(saved){
+    try{
+      const d=JSON.parse(saved);
+      document.getElementById('pin-screen-user').textContent='Connecte en tant que '+d.u;
+      pinScreen.style.display='block';classicCard.style.display='none';
+      const pi=document.getElementById('pin-input');if(pi){pi.value='';setTimeout(()=>pi.focus(),300);}
+    }catch(e){pinScreen.style.display='none';classicCard.style.display='block';}
+  }else{
+    pinScreen.style.display='none';classicCard.style.display='block';
+  }
+}
+function usePasswordInstead(){
+  document.getElementById('pin-screen').style.display='none';
+  document.getElementById('classic-login-card').style.display='block';
+}
+async function doPinLogin(){
+  const entered=document.getElementById('pin-input').value;
+  const saved=localStorage.getItem('nty_quick_pin');
+  if(!saved)return;
+  const d=JSON.parse(saved);
+  if(entered!==d.pin){
+    document.getElementById('pin-err').style.display='block';
+    if(navigator.vibrate)navigator.vibrate([50,50,50]);
+    return;
+  }
+  document.getElementById('pin-err').style.display='none';
+  document.getElementById('login-user').value=d.u;
+  document.getElementById('login-pass').value=d.p;
+  await doLogin();
+}
+function retirerPinRapide(){
+  if(!confirm('Desactiver le code PIN rapide sur cet appareil ?'))return;
+  localStorage.removeItem('nty_quick_pin');
+  toast('Code PIN desactive.');
+}
 
 // CLIENT NAV
 function cPage(page,btn){
@@ -724,11 +777,12 @@ function aPage(page,btn){
 async function renderAdminDashboard(){
   const c=document.getElementById('a-content');
   try{
-    const [clients,payments,inscrip,zones]=await Promise.all([
+    const [clients,payments,inscrip,zones,ticketsLibres]=await Promise.all([
       sbGet('clients'),
       sbGet('payments','order=created_at.desc'),
       sbGet('inscriptions','status=eq.pending').catch(()=>[]),
-      sbGet('zones','order=name.asc').catch(()=>[])
+      sbGet('zones','order=name.asc').catch(()=>[]),
+      sbGet('tickets','is_used=eq.false&select=client_id').catch(()=>[])
     ]);
     const pPending=payments.filter(p=>p.status==='pending');
     const lastCount=localStorage.getItem('nty_last_pending_count');
@@ -738,8 +792,18 @@ async function renderAdminDashboard(){
     const dot=document.getElementById('a-pay-dot');if(dot)dot.style.display=pPending.length>0?'block':'none';
     const dotI=document.getElementById('a-inscr-dot');if(dotI)dotI.style.display=inscrip.length>0?'block':'none';
     const soon=clients.filter(x=>{const dl=daysLeft(x.expiry_date);return dl!==null&&dl>=0&&dl<=5;});
+    const idsAvecTicket=new Set(ticketsLibres.map(t=>t.client_id));
+    const sansTicket=clients.filter(x=>x.status==='active'&&!idsAvecTicket.has(x.id));
     const cZ=JSON.parse(localStorage.getItem('nty_coupure_zones')||'{}');
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">📊 Dashboard</div><div class="page-sub">Vue generale NTY Starnet</div></div>';
+
+    if(sansTicket.length>0){
+      html+='<div class="section-card" style="border-color:rgba(245,158,11,0.3);background:linear-gradient(145deg,rgba(245,158,11,0.08),var(--card2))"><div class="section-head" style="color:var(--warning2)">⚠️ Clients sans ticket en stock ('+sansTicket.length+')</div>';
+      html+='<p style="font-size:12px;color:var(--text2);margin-bottom:10px">Ces clients actifs n ont aucun ticket disponible — le bot ne pourra pas valider automatiquement leur prochain renouvellement.</p>';
+      sansTicket.slice(0,5).forEach(x=>{html+='<div class="info-row" style="cursor:pointer" onclick="openDetail(\''+x.id+'\')"><div class="info-key">'+x.name+'</div><div class="info-val" style="font-size:11px;color:var(--warning2)">Ajouter des tickets →</div></div>';});
+      if(sansTicket.length>5)html+='<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px">+ '+(sansTicket.length-5)+' autre(s)</div>';
+      html+='</div>';
+    }
 
     // Coupure par zone
     html+='<div class="coupure-panel-wrap"><div class="coupure-panel-title">⚡ Gestion des coupures</div><div class="zone-grid">';
@@ -817,6 +881,8 @@ async function renderAdminDashboard(){
         const urgColor=dl<=2?'var(--danger2)':dl<=4?'var(--warning2)':'var(--accent2)';
         html+='<div class="info-row"><div class="info-key"><div style="font-weight:600">'+x.name+'</div><div style="font-size:11px;color:var(--text3)">'+x.plan+' · expire le '+fmtDate(x.expiry_date)+'</div></div><div style="display:flex;align-items:center;gap:8px"><div style="font-family:var(--mono);font-weight:800;color:'+urgColor+'">'+dl+'j</div><span class="badge badge-'+(dl<=2?'expired':'pending')+'">'+(dl<=2?'🔴 Urgent':'⏰ Bientot')+'</span></div></div>';
       });
+      const urgents=thisWeek.filter(x=>daysLeft(x.expiry_date)<=3);
+      if(urgents.length>0)html+='<button class="btn btn-secondary btn-full" style="margin-top:10px" onclick="relancerExpirants()">📨 Relancer les '+urgents.length+' client(s) qui expirent (≤3j)</button>';
       html+='</div>';
     }
 
@@ -828,6 +894,20 @@ async function renderAdminDashboard(){
     }
     html+='</div>';c.innerHTML=html;
   }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'dashboard\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
+}
+async function relancerExpirants(){
+  if(!confirm('Envoyer un message de relance a tous les clients qui expirent dans 3 jours ou moins ?'))return;
+  try{
+    const clients=await sbGet('clients','status=eq.active');
+    const urgents=clients.filter(x=>{const dl=daysLeft(x.expiry_date);return dl!==null&&dl>=0&&dl<=3;});
+    if(urgents.length===0){toast('Aucun client urgent a relancer.');return;}
+    await Promise.all(urgents.map(x=>{
+      const dl=daysLeft(x.expiry_date);
+      const msg=dl===0?'⏰ Votre abonnement expire AUJOURD HUI ! Renouvelez vite pour ne pas perdre votre connexion.':'⏰ Votre abonnement expire dans '+dl+' jour(s) (le '+fmtDate(x.expiry_date)+'). Pensez a renouveler pour ne pas etre coupe.';
+      return sbPost('messages',{client_id:x.id,sender:'admin',sender_name:'Admin',content:msg});
+    }));
+    toast('📨 '+urgents.length+' client(s) relance(s) !');
+  }catch(e){toast('Erreur lors de la relance.','error');}
 }
 
 function toggleZoneCoupure(zoneName,active){
@@ -1189,8 +1269,9 @@ async function renderAdminStats(){
     [{l:'Actifs',v:clients.filter(x=>x.status==='active').length,col:'var(--success)'},{l:'En attente',v:clients.filter(x=>x.status==='pending').length,col:'var(--warning)'},{l:'Expires',v:clients.filter(x=>x.status==='expired').length,col:'var(--danger)'}].forEach(s=>{const pct=Math.round(s.v/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+s.l+'</span><span class="prog-val">'+s.v+' ('+pct+'%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+s.col+'"></div></div></div>';});
     html+='</div>';
     if(Object.keys(planCount).length>0){html+='<div class="section-card"><div class="section-head">Par plan</div>';Object.entries(planCount).forEach(([plan,count])=>{const pct=Math.round(count/total*100);html+='<div class="prog-wrap"><div class="prog-label"><span>'+plan+'</span><span class="prog-val">'+count+'</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent)"></div></div></div>';});html+='</div>';}
-    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button></div>';
+    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Securite</div><button class="btn btn-ghost btn-full" onclick="showChangePass()">Changer mon mot de passe admin</button>'+(localStorage.getItem('nty_quick_pin')?'<button class="btn btn-ghost btn-full" style="margin-top:8px;color:var(--danger2)" onclick="retirerPinRapide()">Desactiver le code PIN rapide</button>':'')+'</div>';
     html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><path d="M12 2a10 10 0 1 0 0 20c1.5 0 2-1 2-2s-.5-1.3-.5-2.3S14.5 16 15.5 16H17a4 4 0 0 0 4-4c0-5.5-4.5-10-9-10z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="11" cy="7.3" r="1"/><circle cx="15.5" cy="8" r="1"/><circle cx="17.5" cy="11.5" r="1"/></svg>Personnaliser</div><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Couleur d accent de l application</p>'+paletteSwatches()+'</div>';
+    html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Sauvegarde</div><p style="font-size:12px;color:var(--text2);margin-bottom:10px">Telecharge une copie de toutes tes donnees (clients, paiements, tickets) en cas de besoin.</p><button class="btn btn-ghost btn-full" onclick="exporterSauvegarde()">📥 Exporter mes donnees (Excel)</button></div>';
     html+='<div class="section-card"><div class="section-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:5px" ><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Cache & Stockage</div><button class="btn btn-ghost btn-full" onclick="showCacheManager()">Gérer le cache de l application</button></div>';
     html+='<button class="btn btn-ghost btn-full" id="install-btn-admin" onclick="installApp()" style="display:none">📲 Installer l app sur cet appareil</button>';
     html+='</div>';c.innerHTML=html;
@@ -1702,6 +1783,29 @@ async function deleteInscription(id){
 }
 
 // ═══ NETTOYAGE DU CACHE ═══
+async function exporterSauvegarde(){
+  toast('📥 Preparation de l export...');
+  try{
+    const [clients,payments,tickets]=await Promise.all([sbGet('clients'),sbGet('payments'),sbGet('tickets')]);
+    function toCsv(rows,cols){
+      const header=cols.join(';');
+      const lines=rows.map(r=>cols.map(c=>('"'+String(r[c]??'').replace(/"/g,'""')+'"')).join(';'));
+      return [header,...lines].join('\r\n');
+    }
+    function download(filename,content){
+      const blob=new Blob(['\ufeff'+content],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=filename;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    const dateStr=new Date().toISOString().split('T')[0];
+    download('nty_clients_'+dateStr+'.csv',toCsv(clients,['name','username','phone','zone','plan','status','ip_address','start_date','expiry_date']));
+    setTimeout(()=>download('nty_paiements_'+dateStr+'.csv',toCsv(payments,['client_name','plan','amount','payment_date','status','operateur','reference'])),400);
+    setTimeout(()=>download('nty_tickets_'+dateStr+'.csv',toCsv(tickets,['client_id','code','is_used','created_at'])),800);
+    toast('✅ 3 fichiers exportes ! Verifie tes telechargements.');
+  }catch(e){toast('Erreur lors de l export.','error');}
+}
 async function showCacheManager(){
   // Calculer la taille du localStorage
   let totalSize=0;
@@ -1891,10 +1995,16 @@ function installApp(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   initStars();
+  // Verification d'expiration en continu tant que l'app est ouverte (pas seulement au login)
+  setInterval(()=>{
+    if(me&&me.role==='admin')checkExpiredClients();
+    else if(me&&me.role==='client')checkExpiredClient(me);
+  },5*60*1000);
   const isLight=document.documentElement.getAttribute('data-theme')==='light';
   ['theme-toggle-btn','theme-toggle-btn-admin'].forEach(id=>{const b=document.getElementById(id);if(b)b.innerHTML=isLight?`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;});
   // Cacher le splash après 2.2 secondes
   setTimeout(hideSplash, 2200);
+  afficherEcranLoginApproprie();
   // Connexion rapide - remplir le username sauvegardé
   const savedUser=localStorage.getItem('nty_remember_user');
   if(savedUser){
@@ -1902,5 +2012,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(userInp){userInp.value=savedUser;document.getElementById('login-pass').focus();}
   }
   document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  const pinInp=document.getElementById('pin-input');
+  if(pinInp)pinInp.addEventListener('keydown',e=>{if(e.key==='Enter')doPinLogin();});
   document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
 });
