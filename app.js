@@ -189,33 +189,19 @@ async function doLogin(){
 function logout(){me=null;document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('login-err').style.display='none';showPage('page-login');afficherEcranLoginApproprie();}
 function togglePass(){const i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password';}
 
-// ═══ CODE PIN RAPIDE ═══
+// ═══ CODE PIN RAPIDE (desactive) ═══
 function proposerPinRapide(username,password){
-  const dejaConfigure=localStorage.getItem('nty_quick_pin');
-  if(dejaConfigure)return; // deja configure, ne pas redemander
-  setTimeout(()=>{
-    if(!confirm('Activer un code PIN a 4 chiffres pour deverrouiller l app plus vite la prochaine fois (sur cet appareil uniquement) ?'))return;
-    const pin=prompt('Choisissez un code a 4 chiffres :');
-    if(!pin||!/^\d{4}$/.test(pin)){toast('Code invalide, PIN non active.','error');return;}
-    localStorage.setItem('nty_quick_pin',JSON.stringify({u:username,p:password,pin:pin}));
-    toast('🔒 Code PIN active !');
-  },800);
+  // Fonctionnalite retiree : plus de popup de proposition de PIN apres connexion.
+  return;
 }
 function afficherEcranLoginApproprie(){
-  const saved=localStorage.getItem('nty_quick_pin');
+  // Le code PIN rapide est desactive : on affiche toujours le formulaire classique.
   const pinScreen=document.getElementById('pin-screen');
   const classicCard=document.getElementById('classic-login-card');
   if(!pinScreen||!classicCard)return;
-  if(saved){
-    try{
-      const d=JSON.parse(saved);
-      document.getElementById('pin-screen-user').textContent='Connecte en tant que '+d.u;
-      pinScreen.style.display='block';classicCard.style.display='none';
-      const pi=document.getElementById('pin-input');if(pi){pi.value='';setTimeout(()=>pi.focus(),300);}
-    }catch(e){pinScreen.style.display='none';classicCard.style.display='block';}
-  }else{
-    pinScreen.style.display='none';classicCard.style.display='block';
-  }
+  pinScreen.style.display='none';classicCard.style.display='block';
+  // Nettoyage : supprime un ancien PIN eventuellement deja enregistre sur cet appareil.
+  if(localStorage.getItem('nty_quick_pin'))localStorage.removeItem('nty_quick_pin');
 }
 function usePasswordInstead(){
   document.getElementById('pin-screen').style.display='none';
@@ -1133,7 +1119,7 @@ async function openDetail(id){
       html+='<div class="divider"></div><div class="inp-label">📊 Consommation ('+cl.plan+')</div>';
       html+='<div style="height:20px;border-radius:10px;background:rgba(255,255,255,0.06);overflow:hidden;margin-bottom:10px;position:relative"><div style="height:100%;width:'+cp+'%;background:'+gaugeCol+';border-radius:10px;transition:width 0.6s cubic-bezier(0.34,1.2,0.64,1)"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5)">'+cp+'% utilise</div></div>';
       html+='<div style="display:flex;gap:8px;margin-bottom:8px">';
-      [25,50,75,90].forEach(pct=>{html+='<button class="btn '+(cl.consumption_pct==pct?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\','+pct+')">'+pct+'%</button>';});
+      [25,50,75,90,100].forEach(pct=>{html+='<button class="btn '+(cl.consumption_pct==pct?'btn-primary':'btn-ghost')+'" style="flex:1;padding:9px;margin:0;font-size:13px" onclick="setConsumption(\''+id+'\','+pct+')">'+pct+'%</button>';});
       html+='</div><button class="btn btn-ghost btn-full" style="margin-bottom:8px" onclick="setConsumption(\''+id+'\',0)">↺ Reinitialiser</button>';
     }
 
@@ -1170,7 +1156,7 @@ async function addMoreTickets(clientId){const raw=document.getElementById('new-t
 async function setConsumption(id,pct){
   try{
     await sbPatch('clients','id=eq.'+id,{consumption_pct:pct.toString()});
-    if(pct>0)await sbPost('messages',{client_id:id,sender:'admin',sender_name:'Admin',content:'📊 Mise a jour consommation : vous avez utilise '+pct+'% de votre forfait.'+(pct>=90?'\n⚠️ Pensez a renouveler bientot !':'')});
+    if(pct>0)await sbPost('messages',{client_id:id,sender:'admin',sender_name:'Admin',content:'📊 Mise a jour consommation : vous avez utilise '+pct+'% de votre forfait.'+(pct>=100?'\n🚫 Forfait epuise ! Renouvelez pour continuer a naviguer.':pct>=90?'\n⚠️ Pensez a renouveler bientot !':'')});
     toast(pct>0?'✅ Consommation : '+pct+'%':'✅ Reinitialise');openDetail(id);
   }catch(e){toast('Erreur','error');}
 }
