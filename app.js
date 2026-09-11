@@ -470,8 +470,23 @@ async function hashImage(dataUrl){
     return Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
   }catch(e){return null;}
 }
+let tesseractLoadPromise=null;
+function chargerTesseract(){
+  if(typeof Tesseract!=='undefined')return Promise.resolve();
+  if(tesseractLoadPromise)return tesseractLoadPromise;
+  tesseractLoadPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('Impossible de charger le module de verification.'));
+    document.head.appendChild(s);
+  });
+  return tesseractLoadPromise;
+}
 async function analyserCapturePaiement(dataUrl){
   try{
+    const chargementTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout chargement')),12000));
+    await Promise.race([chargerTesseract(),chargementTimeout]);
     if(typeof Tesseract==='undefined')return null;
     const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout OCR')),30000));
     const result=await Promise.race([Tesseract.recognize(dataUrl,'fra',{}),timeoutPromise]);
