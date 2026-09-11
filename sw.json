@@ -1,0 +1,10 @@
+{
+  "headers": [
+    {
+      "source": "/(index.html|app.js|inscription.html|manifest.json|sw.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    }
+  ]
+}
