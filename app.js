@@ -108,7 +108,17 @@ const SB_KEY='sb_publishable_3HKOfxQfItpFE8VYDIEULg_j550L4Hi';
 async function sb(table,method='GET',body=null,query=''){
   const url=SB_URL+'/rest/v1/'+table+(query?'?'+query:'');
   const headers={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
-  const res=await fetch(url,{method,headers,body:body?JSON.stringify(body):null});
+  const controller=new AbortController();
+  const timeoutId=setTimeout(()=>controller.abort(),15000);
+  let res;
+  try{
+    res=await fetch(url,{method,headers,body:body?JSON.stringify(body):null,signal:controller.signal});
+  }catch(e){
+    if(e.name==='AbortError')throw new Error('Connexion trop lente ou interrompue. Verifiez votre reseau et reessayez.');
+    throw e;
+  }finally{
+    clearTimeout(timeoutId);
+  }
   if(!res.ok){const e=await res.text();throw new Error(e);}
   const txt=await res.text();return txt?JSON.parse(txt):[];
 }
@@ -463,7 +473,8 @@ async function hashImage(dataUrl){
 async function analyserCapturePaiement(dataUrl){
   try{
     if(typeof Tesseract==='undefined')return null;
-    const result=await Tesseract.recognize(dataUrl,'fra',{});
+    const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout OCR')),30000));
+    const result=await Promise.race([Tesseract.recognize(dataUrl,'fra',{}),timeoutPromise]);
     const text=result.data.text||'';
     const words=result.data.words||[];
     const avgConf=words.length?words.reduce((s,w)=>s+w.confidence,0)/words.length:0;
@@ -618,7 +629,7 @@ async function renderClientMessages(){
     html+='</div>';c.innerHTML=html;
     const el=document.getElementById('bot-msg-list');if(el)el.scrollTop=el.scrollHeight;
     const el2=document.getElementById('c-msg-list');if(el2)el2.scrollTop=el2.scrollHeight;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="cPage(\'messages\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
 }
 function switchChatTab(tab){
   document.getElementById('tab-bot').classList.toggle('active',tab==='bot');
@@ -978,7 +989,7 @@ async function renderAdminClients(search=''){
       html+='</div>';
     }
     html+='</div>';c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'clients\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
 }
 
 // ADMIN PAIEMENTS
@@ -1010,7 +1021,7 @@ async function renderAdminPaiements(filter='pending'){
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'paiements\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
 }
 
 // VALIDATE
@@ -1212,7 +1223,7 @@ async function renderAdminMessages(){
       html+='<div class="conv-card" onclick="openAdminChat(\''+cl.id+'\',\''+cl.name+'\')"><div class="conv-avatar">'+initials(cl.name)+'</div><div class="conv-info"><div class="conv-name">'+cl.name+'</div><div class="conv-last">'+lastText+'</div></div><div class="conv-right"><span class="badge badge-'+(cl.status||'pending')+'" style="font-size:9px">'+({active:'Actif',expired:'Expire',pending:'En attente'}[cl.status||'pending'])+'</span></div></div>';
     });
     html+='</div>';c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'messages\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
 }
 async function openAdminChat(clientId,clientName){
   curChatId=clientId;
@@ -1262,7 +1273,7 @@ async function renderAdminStats(){
     html+='<button class="btn btn-ghost btn-full" id="install-btn-admin" onclick="installApp()" style="display:none">📲 Installer l app sur cet appareil</button>';
     html+='</div>';c.innerHTML=html;
     if(window.ntyDeferredPrompt){const ib=document.getElementById('install-btn-admin');if(ib)ib.style.display='flex';}
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'stats\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
 }
 
 // ═══ EXPORT EXCEL PROFESSIONNEL ═══
@@ -1713,7 +1724,7 @@ async function renderAdminInscriptions(){
       html+='</div>';
     });
     html+='</div>';c.innerHTML=html;
-  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur</p></div>';}
+  }catch(e){c.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Erreur<br><button class="btn btn-ghost" onclick="aPage(\'inscriptions\',null)" style="margin-top:12px;width:auto;padding:10px 20px">Reessayer</button></p></div>';}
 }
 
 async function acceptInscription(id,name,phone,zone){
