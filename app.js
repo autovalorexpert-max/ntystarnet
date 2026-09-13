@@ -1155,7 +1155,7 @@ async function openDetail(id){
     // Tickets tab
     html+='<div id="dt-tickets" style="display:none"><label class="inp-label">Ajouter tickets (un par ligne)</label><textarea class="inp" id="new-tickets-inp" placeholder="ABC123-XYZ"></textarea><button class="btn btn-success btn-full" onclick="addMoreTickets(\''+id+'\')">+ Ajouter</button><div style="margin-top:12px">';
     if(!tickets.length)html+='<div class="empty"><div class="empty-icon">🎫</div><p>Aucun ticket</p></div>';
-    else tickets.forEach((t,i)=>{html+='<div class="ticket-row '+(t.is_used?'ticket-used':'')+'"><span class="ticket-row-code">'+(i+1)+'. '+t.code+(t.is_current?' 👈':'')+'</span><span class="tag '+(t.is_current?'tag-cur':t.is_used?'tag-used':'tag-free')+'">'+(t.is_current?'Actuel':t.is_used?'Utilise':'Dispo')+'</span></div>';});
+    else tickets.forEach((t,i)=>{html+='<div class="ticket-row '+(t.is_used?'ticket-used':'')+'" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="ticket-row-code">'+(i+1)+'. '+t.code+(t.is_current?' 👈':'')+'</span><div style="display:flex;align-items:center;gap:6px"><span class="tag '+(t.is_current?'tag-cur':t.is_used?'tag-used':'tag-free')+'">'+(t.is_current?'Actuel':t.is_used?'Utilise':'Dispo')+'</span><button class="btn btn-ghost" style="padding:5px 8px;margin:0;width:auto" onclick="editTicket(\''+t.id+'\',\''+t.code+'\',\''+id+'\')" title="Modifier"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button><button class="btn btn-ghost" style="padding:5px 8px;margin:0;width:auto;color:var(--danger2)" onclick="deleteTicketRow(\''+t.id+'\',\''+id+'\')" title="Supprimer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></div>';});
     html+='</div></div>';
 
     // Edit tab
@@ -1179,6 +1179,23 @@ function dtab(tab,btn){document.querySelectorAll('#modal-content .dtab').forEach
 async function quickStatus(id,status){try{await sbPatch('clients','id=eq.'+id,{status});closeModal();window.ntyClientsCache=null;toast('Statut mis a jour !');renderAdminClients();}catch(e){toast('Erreur','error');}}
 async function deleteClient(id,name){if(!confirm('Supprimer "'+name+'" ? Irreversible.'))return;try{await sbDelete('clients','id=eq.'+id);closeModal();toast('Client supprime');window.ntyClientsCache=null;renderAdminClients();}catch(e){toast('Erreur','error');}}
 async function addMoreTickets(clientId){const raw=document.getElementById('new-tickets-inp')?.value.trim();if(!raw){toast('Entrez un ticket','error');return;}const codes=raw.split('\n').map(t=>t.trim()).filter(t=>t);try{for(const code of codes){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}toast('✅ '+codes.length+' ticket(s) ajoute(s) !');openDetail(clientId);}catch(e){toast('Erreur','error');}}
+async function editTicket(ticketId,oldCode,clientId){
+  const nouveauCode=prompt('Modifier le code du ticket :',oldCode);
+  if(!nouveauCode||!nouveauCode.trim()||nouveauCode.trim()===oldCode)return;
+  try{
+    await sbPatch('tickets','id=eq.'+ticketId,{code:nouveauCode.trim()});
+    // Si ce ticket etait le ticket actuel du client, mettre a jour aussi cote client
+    await sbPatch('clients','id=eq.'+clientId+'&current_ticket=eq.'+encodeURIComponent(oldCode),{current_ticket:nouveauCode.trim()}).catch(()=>{});
+    toast('✅ Ticket modifie !');openDetail(clientId);
+  }catch(e){toast('Erreur lors de la modification.','error');}
+}
+async function deleteTicketRow(ticketId,clientId){
+  if(!confirm('Supprimer ce ticket ? Irreversible.'))return;
+  try{
+    await sbDelete('tickets','id=eq.'+ticketId);
+    toast('✅ Ticket supprime !');openDetail(clientId);
+  }catch(e){toast('Erreur lors de la suppression.','error');}
+}
 async function setConsumption(id,pct){
   try{
     await sbPatch('clients','id=eq.'+id,{consumption_pct:pct.toString()});
