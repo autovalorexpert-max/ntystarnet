@@ -128,6 +128,67 @@ async function sbPatch(t,q,d){return sb(t,'PATCH',d,q);}
 async function sbDelete(t,q){return sb(t,'DELETE',null,q);}
 
 let me=null,selPlanName='100 Go',photoData=null,curChatId=null,curDetailId=null,curPayId=null;
+
+// ═══ TARIFS : ancien / nouveau (choisi par client dans l'admin -> colonne clients.tarif) ═══
+const TARIFS={
+  ancien:[
+    {n:'100 Go',p:40000,d:'Valable 1 mois',icon:'📶'},
+    {n:'200 Go',p:55000,d:'Valable 1 mois',icon:'📶'},
+    {n:'Illimite 6 appareils',p:65000,d:'1 mois · 6 appareils',icon:'🏠'},
+    {n:'Illimite 9+ appareils',p:90000,d:'1 mois · 9+ appareils',icon:'🏢'}
+  ],
+  nouveau:[
+    {n:'100 Go',p:50000,d:'Valable 1 mois',icon:'📶'},
+    {n:'200 Go',p:65000,d:'Valable 1 mois',icon:'📶'},
+    {n:'Illimite 5 appareils',p:80000,extra:10000,d:'1 mois · 5 appareils',icon:'🏠'},
+    {n:'Illimite 12 appareils',p:120000,d:'1 mois · 12 appareils',icon:'🏢'}
+  ]
+};
+// Plan equivalent quand l'admin change le tarif d'un client (propose automatiquement)
+const EQUIV_PLANS={'Illimite 6 appareils':'Illimite 5 appareils','Illimite 9+ appareils':'Illimite 12 appareils','Illimite 5 appareils':'Illimite 6 appareils','Illimite 12 appareils':'Illimite 9+ appareils'};
+function fmtPrix(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function tarifKey(c){return c&&c.tarif==='nouveau'?'nouveau':'ancien';}
+function plansDuTarif(t){return TARIFS[t==='nouveau'?'nouveau':'ancien'];}
+function prixDuPlan(planName,tarif,extra){
+  const pl=plansDuTarif(tarif).find(x=>x.n===planName);
+  if(!pl)return 0;
+  return pl.p+(pl.extra?(parseInt(extra)||0)*pl.extra:0);
+}
+// Appareils supplementaires du client connecte (uniquement pour son plan actuel)
+function extraPour(planName){return me&&me.plan===planName?(parseInt(me.extra_devices)||0):0;}
+function optionsPlans(tarif,selected){
+  return plansDuTarif(tarif).map(p=>'<option value="'+p.n+'"'+(p.n===selected?' selected':'')+'>'+p.n+' — '+fmtPrix(p.p)+' Ar</option>').join('');
+}
+// Bloc admin : choix du tarif + plan + appareils supplementaires + prix calcule
+function blocTarifHtml(prefix,tarif,plan,extra){
+  return '<label class="inp-label">💰 Tarif du client</label><select class="inp" id="'+prefix+'-tarif" onchange="majPlansAdmin(\''+prefix+'\',false)"><option value="ancien"'+(tarif==='ancien'?' selected':'')+'>Ancien tarif</option><option value="nouveau"'+(tarif==='nouveau'?' selected':'')+'>Nouveau tarif</option></select>'
+    +'<label class="inp-label">Plan</label><select class="inp" id="'+prefix+'-plan" onchange="majPlansAdmin(\''+prefix+'\',true)">'+optionsPlans(tarif,plan)+'</select>'
+    +'<div id="'+prefix+'-extra-wrap" style="display:none"><label class="inp-label">Appareils supplementaires (+10.000 Ar chacun)</label><input class="inp" type="number" min="0" max="20" id="'+prefix+'-extra" value="'+(parseInt(extra)||0)+'" oninput="majPlansAdmin(\''+prefix+'\',true)"></div>'
+    +'<div id="'+prefix+'-prix" class="info-box" style="margin-bottom:12px;font-size:13px"></div>';
+}
+function majPlansAdmin(prefix,keepPlan){
+  const tEl=document.getElementById(prefix+'-tarif'),pEl=document.getElementById(prefix+'-plan');
+  if(!tEl||!pEl)return;
+  const t=tEl.value;
+  if(!keepPlan){
+    let cur=pEl.value;
+    if(!plansDuTarif(t).some(x=>x.n===cur))cur=EQUIV_PLANS[cur]||cur;
+    pEl.innerHTML=optionsPlans(t,cur);
+  }
+  const pl=plansDuTarif(t).find(x=>x.n===pEl.value);
+  const wrap=document.getElementById(prefix+'-extra-wrap');
+  if(wrap)wrap.style.display=pl&&pl.extra?'block':'none';
+  const ex=pl&&pl.extra?(parseInt(document.getElementById(prefix+'-extra').value)||0):0;
+  const box=document.getElementById(prefix+'-prix');
+  if(box)box.innerHTML='Prix mensuel : <strong>'+fmtPrix(prixDuPlan(pEl.value,t,ex))+' Ar</strong>';
+}
+function lireBlocTarif(prefix){
+  const tarif=document.getElementById(prefix+'-tarif').value==='nouveau'?'nouveau':'ancien';
+  const plan=document.getElementById(prefix+'-plan').value;
+  const pl=plansDuTarif(tarif).find(x=>x.n===plan);
+  const extra=pl&&pl.extra?Math.max(0,parseInt(document.getElementById(prefix+'-extra').value)||0):0;
+  return {tarif,plan,extra,plan_price:fmtPrix(prixDuPlan(plan,tarif,extra))};
+}
 let coupureActive=localStorage.getItem('nty_coupure')==='true';
 let coupureMsg=localStorage.getItem('nty_coupure_msg')||'Coupure electrique en cours.';
 
@@ -329,7 +390,8 @@ async function renderClientHome(){
 // CLIENT PAIEMENT
 function renderClientPaiement(){
   const c=document.getElementById('c-content');photoData=null;
-  const plans=[{n:'100 Go',p:'40.000',d:'Valable 1 mois',icon:'📶'},{n:'200 Go',p:'55.000',d:'Valable 1 mois',icon:'📶'},{n:'Illimite 6 appareils',p:'65.000',d:'1 mois · 6 appareils',icon:'🏠'},{n:'Illimite 9+ appareils',p:'90.000',d:'1 mois · 9+ appareils',icon:'🏢'}];
+  const tk=tarifKey(me);
+  const plans=plansDuTarif(tk).map(pl=>{const ex=pl.extra?extraPour(pl.n):0;return {n:pl.n,p:fmtPrix(prixDuPlan(pl.n,tk,ex)),d:pl.d+(ex>0?' + '+ex+' sup.':''),icon:pl.icon};});
   const nums=[{n:'0344127501',name:'Rojo Rindra'},{n:'0346341775',name:'Rasoamanana Ny Tiana'},{n:'0321825114',name:'Rasoamanana Ny Tiana'}];
   let html='<div class="fade-up"><div class="page-header"><div class="page-title">💳 Paiement</div><div class="page-sub">Renouveler ou changer de date</div></div>';
 
@@ -539,8 +601,8 @@ async function submitPay(){
   const d=document.getElementById('c-paydate').value;
   if(!d){toast('Veuillez indiquer la date du paiement.','error');return;}
   if(!photoData){toast('Merci d ajouter une photo du recu.','error');return;}
-  const prices={'100 Go':40000,'200 Go':55000,'Illimite 6 appareils':65000,'Illimite 9+ appareils':90000};
-  const prix=prices[selPlanName];
+  const prix=prixDuPlan(selPlanName,tarifKey(me),extraPour(selPlanName));
+  if(!prix){toast('Plan invalide.','error');return;}
   const prixFmt=prix.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   const operateur=document.getElementById('c-operateur').value;
   const montantAttendu=operateur==='airtel'?null:calcMontantTotal(prix,operateur);
@@ -999,7 +1061,7 @@ async function renderAdminClients(search=''){
       html+='<div class="client-list">';
       clients.forEach(cl=>{
         const dl=daysLeft(cl.expiry_date);
-        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+'</div><div class="client-meta">📍 '+(cl.zone||'—')+' · @'+cl.username+' · '+(tCount[cl.id]||0)+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expire',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
+        html+='<div class="client-card" onclick="openDetail(\''+cl.id+'\')"><div class="client-avatar">'+initials(cl.name)+'</div><div class="client-info"><div class="client-name">'+cl.name+(cl.tarif==='nouveau'?' <span class="tag tag-cur" style="margin-left:4px">NOUVEAU</span>':'')+'</div><div class="client-meta">📍 '+(cl.zone||'—')+' · @'+cl.username+' · '+(tCount[cl.id]||0)+' ticket(s) · '+(dl!==null&&dl>=0?dl+'j':'—')+'</div></div><div class="client-right"><span class="badge badge-'+(cl.status||'pending')+'">'+({active:'Actif',expired:'Expire',pending:'En attente'}[cl.status||'pending'])+'</span><div class="client-arrow">›</div></div></div>';
       });
       html+='</div>';
     }
@@ -1129,7 +1191,8 @@ async function openDetail(id){
       ['Statut','<span class="badge badge-'+(cl.status||'pending')+'">'+({active:'✅ Actif',expired:'❌ Expire',pending:'⏳ En attente'}[cl.status||'pending'])+'</span>'],
       ['Zone','📍 '+(cl.zone||'—')],
       ['Adresse IP','<span style="font-family:var(--mono)">'+(cl.ip_address||'Non assignee')+'</span>'],
-      ['Plan',cl.plan||'—'],
+      ['Plan',(cl.plan||'—')+((parseInt(cl.extra_devices)||0)>0?' (+'+cl.extra_devices+' appareil(s) sup.)':'')],
+      ['Tarif',cl.tarif==='nouveau'?'🆕 Nouveau tarif':'Ancien tarif'],
       ['Prix',(cl.plan_price||'—')+' Ar/mois'],
       ['Debut',fmtDate(cl.start_date)],
       ['Fin',(cl.expiry_date?fmtDate(cl.expiry_date)+' a 23h59':'—')],
@@ -1166,12 +1229,12 @@ async function openDetail(id){
     html+='<label class="inp-label">Telephone</label><input class="inp" type="tel" id="edit-phone" value="'+(cl.phone||'')+'">';
     html+='<label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="edit-ip" value="'+(cl.ip_address||'')+'" placeholder="Ex: 192.168.0.50">';
     html+='<label class="inp-label">📍 Zone</label><select class="inp" id="edit-zone">'+editZones.map(z=>'<option '+(cl.zone===z.name?'selected':'')+'>'+z.name+'</option>').join('')+'</select>';
-    html+='<label class="inp-label">Plan</label><select class="inp" id="edit-plan">'+['100 Go','200 Go','Illimite 6 appareils','Illimite 9+ appareils'].map(p=>'<option '+(cl.plan===p?'selected':'')+'>'+p+'</option>').join('')+'</select>';
+    html+=blocTarifHtml('edit',tarifKey(cl),cl.plan,cl.extra_devices);
     html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de debut abonnement</label><input class="inp" type="date" id="edit-start" value="'+(cl.start_date||'')+'" onchange="autoCalcExpiry()">';
     html+='<label class="inp-label" style="color:var(--accent2)">📅 Date de fin (expiration) — calculee automatiquement</label><input class="inp" type="date" id="edit-expiry" value="'+(cl.expiry_date||'')+'">';
     html+='<button class="btn btn-primary btn-full" onclick="saveClientEdit(\''+id+'\')">💾 Enregistrer</button></div>';
 
-    showModal(html);
+    showModal(html);majPlansAdmin('edit',true);
   }catch(e){toast('Erreur','error');}
 }
 
@@ -1206,12 +1269,11 @@ async function setConsumption(id,pct){
 async function saveClientEdit(id){
   const name=document.getElementById('edit-name').value.trim();const user=document.getElementById('edit-user').value.trim().toLowerCase();
   const pass=document.getElementById('edit-pass').value;const phone=document.getElementById('edit-phone').value.trim();
-  const ip=document.getElementById('edit-ip').value.trim();const zone=document.getElementById('edit-zone')?.value||'';const plan=document.getElementById('edit-plan').value;
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
+  const ip=document.getElementById('edit-ip').value.trim();const zone=document.getElementById('edit-zone')?.value||'';const bt=lireBlocTarif('edit');const plan=bt.plan;
   if(!name||!user){toast('Nom et username requis','error');return;}
   const startDate=document.getElementById('edit-start')?.value||null;
   const expiryDate=document.getElementById('edit-expiry')?.value||null;
-  const updates={name,username:user,phone,ip_address:ip,zone,plan,plan_price:prices[plan]};
+  const updates={name,username:user,phone,ip_address:ip,zone,plan,plan_price:bt.plan_price,tarif:bt.tarif,extra_devices:bt.extra};
   if(startDate)updates.start_date=startDate;
   if(expiryDate)updates.expiry_date=expiryDate;
   if(pass){if(pass.length<4){toast('Mot de passe trop court','error');return;}updates.password=pass;}
@@ -1221,19 +1283,18 @@ async function saveClientEdit(id){
 async function showAddClient(){
   let zones=[];try{zones=await sbGet('zones','order=name.asc');}catch(e){}
   const zOpts=zones.map(z=>'<option>'+z.name+'</option>').join('');
-  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass"><label class="inp-label">Telephone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="n-ip" placeholder="Ex: 192.168.0.50"><label class="inp-label">📍 Zone *</label><select class="inp" id="n-zone">'+zOpts+'</select><label class="inp-label">Plan</label><select class="inp" id="n-plan"><option>100 Go</option><option>200 Go</option><option>Illimite 6 appareils</option><option>Illimite 9+ appareils</option></select><label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ"></textarea><button class="btn btn-primary btn-full" onclick="addClient()">✓ Creer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');
+  showModal('<div class="modal-title">👤 Nouveau client <button class="modal-close" onclick="closeModal()">×</button></div><label class="inp-label">Nom complet *</label><input class="inp" type="text" id="n-name" placeholder="Ex: Rakoto Jean"><label class="inp-label">Username *</label><input class="inp" type="text" id="n-user" placeholder="Ex: rakoto"><label class="inp-label">Mot de passe *</label><input class="inp" type="password" id="n-pass"><label class="inp-label">Telephone</label><input class="inp" type="tel" id="n-phone" placeholder="034 XX XXX XX"><label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="n-ip" placeholder="Ex: 192.168.0.50"><label class="inp-label">📍 Zone *</label><select class="inp" id="n-zone">'+zOpts+'</select>'+blocTarifHtml('n','nouveau','100 Go',0)+'<label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="n-tickets" placeholder="ABC123-XYZ"></textarea><button class="btn btn-primary btn-full" onclick="addClient()">✓ Creer</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>');majPlansAdmin('n',true);
 }
 async function addClient(){
   const name=document.getElementById('n-name').value.trim();const user=document.getElementById('n-user').value.trim().toLowerCase();
   const pass=document.getElementById('n-pass').value;const phone=document.getElementById('n-phone').value.trim();
   const ip=document.getElementById('n-ip').value.trim();const zone=document.getElementById('n-zone').value;
-  const plan=document.getElementById('n-plan').value;const raw=document.getElementById('n-tickets').value.trim();
+  const bt=lireBlocTarif('n');const plan=bt.plan;const raw=document.getElementById('n-tickets').value.trim();
   if(!name||!user||!pass){toast('Remplissez nom, username et mot de passe.','error');return;}
   if(!raw){toast('Ajoutez au moins un ticket.','error');return;}
   const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
   try{
-    const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
+    const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:bt.plan_price,tarif:bt.tarif,extra_devices:bt.extra,status:'pending',join_date:today()});
     const clientId=nc[0].id;
     for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
     closeModal();window.ntyClientsCache=null;
@@ -1690,7 +1751,7 @@ async function exportClientsPDF(){
     Object.entries(planStats).forEach(function(entry){
       const plan=entry[0],data=entry[1];
       const expCount=clients.filter(c=>c.plan===plan&&c.status==='expired').length;
-      const price=clients.find(c=>c.plan===plan)?.plan_price||'—';
+      const price=[...new Set(clients.filter(c=>c.plan===plan).map(c=>c.plan_price).filter(Boolean))].join(' / ')||'—';
       const rowClass=pidx%2===0?'':'row-even';
       win.document.write(`
         <tr class="${rowClass}">
@@ -1770,11 +1831,11 @@ async function acceptInscription(id,name,phone,zone){
   html+='<label class="inp-label">Telephone</label><input class="inp" type="tel" id="ai-phone" value="'+phone+'">';
   html+='<label class="inp-label">🌐 Adresse IP</label><input class="inp" type="text" id="ai-ip" placeholder="Ex: 192.168.0.50">';
   html+='<label class="inp-label">📍 Zone</label><select class="inp" id="ai-zone">'+zOpts+'</select>';
-  html+='<label class="inp-label">Plan</label><select class="inp" id="ai-plan"><option>100 Go</option><option>200 Go</option><option>Illimite 6 appareils</option><option>Illimite 9+ appareils</option></select>';
+  html+=blocTarifHtml('ai','nouveau','100 Go',0);
   html+='<label class="inp-label">Tickets Mikrotik (un par ligne) *</label><textarea class="inp" id="ai-tickets" placeholder="ABC123-XYZ" rows="3"></textarea>';
   html+='<button class="btn btn-success btn-full" onclick="createFromInscription(\''+id+'\')">✅ Creer le compte</button>';
   html+='<button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>';
-  showModal(html);
+  showModal(html);majPlansAdmin('ai',true);
 }
 
 async function createFromInscription(inscriptionId){
@@ -1784,14 +1845,13 @@ async function createFromInscription(inscriptionId){
   const phone=document.getElementById('ai-phone').value.trim();
   const ip=document.getElementById('ai-ip').value.trim();
   const zone=document.getElementById('ai-zone').value;
-  const plan=document.getElementById('ai-plan').value;
+  const bt=lireBlocTarif('ai');const plan=bt.plan;
   const raw=document.getElementById('ai-tickets').value.trim();
   if(!name||!user||!pass){toast('Nom, username et mot de passe requis','error');return;}
   if(!raw){toast('Ajoutez au moins un ticket','error');return;}
   const tickets=raw.split('\n').map(t=>t.trim()).filter(t=>t);
-  const prices={'100 Go':'40.000','200 Go':'55.000','Illimite 6 appareils':'65.000','Illimite 9+ appareils':'90.000'};
   try{
-    const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:prices[plan],status:'pending',join_date:today()});
+    const nc=await sbPost('clients',{username:user,password:pass,name,phone,ip_address:ip,zone,plan,plan_price:bt.plan_price,tarif:bt.tarif,extra_devices:bt.extra,status:'pending',join_date:today()});
     const clientId=nc[0].id;
     for(const code of tickets){await sbPost('tickets',{client_id:clientId,code,is_used:false,is_current:false});}
     await sbPatch('inscriptions','id=eq.'+inscriptionId,{status:'accepted'});

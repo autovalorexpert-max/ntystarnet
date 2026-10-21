@@ -1,4 +1,4 @@
-const CACHE='nty-starnet-v3';
+const CACHE='nty-starnet-v4';
 const STATIC_FILES=['/manifest.json','/icon.svg'];
 
 self.addEventListener('install',e=>{
