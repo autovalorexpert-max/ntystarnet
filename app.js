@@ -189,6 +189,133 @@ function lireBlocTarif(prefix){
   const extra=pl&&pl.extra?Math.max(0,parseInt(document.getElementById(prefix+'-extra').value)||0):0;
   return {tarif,plan,extra,plan_price:fmtPrix(prixDuPlan(plan,tarif,extra))};
 }
+
+// ═══ BONUS DE JOURS (par client ou par groupe) ═══
+// Regle : le bonus prolonge la date de fin (expiry_date) des clients ACTIFS dont la date n'est pas depassee.
+let _bonusClients=[],_bonusZones=[],_bonusEnCours=false;
+function escBonus(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ajouterJoursStr(dateStr,n){
+  const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr||''));
+  if(!m)return null;
+  return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]+n)).toISOString().slice(0,10);
+}
+function bonusEligible(c){
+  return !!c&&c.status==='active'&&/^\d{4}-\d{2}-\d{2}/.test(String(c.expiry_date||''))&&String(c.expiry_date).slice(0,10)>=today();
+}
+function lireJoursBonus(id){
+  const el=document.getElementById(id);if(!el)return null;
+  const v=parseInt(el.value,10);
+  return (v>=1&&v<=30)?v:null;
+}
+function stepBonus(id,delta){
+  const el=document.getElementById(id);if(!el)return;
+  let v=parseInt(el.value,10);if(isNaN(v))v=1;
+  el.value=Math.min(30,Math.max(1,v+delta));
+}
+function setBonusJours(id,v){const el=document.getElementById(id);if(el)el.value=v;}
+
+// --- Bonus par groupe (zones + tarif) ---
+async function showBonusGroupe(){
+  showModal('<div class="modal-title">🎁 Bonus de jours <button class="modal-close" onclick="closeModal()">×</button></div><div class="loading"><div class="spinner"></div><p>Chargement...</p></div>');
+  try{
+    _bonusClients=await sbGet('clients','select=id,name,zone,tarif,status,expiry_date&order=name.asc');
+  }catch(e){closeModal();toast('Erreur de chargement des clients','error');return;}
+  _bonusZones=[...new Set(_bonusClients.map(c=>c.zone||''))].sort((a,b)=>a.localeCompare(b));
+  const rowStyle='display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;cursor:pointer;font-size:13px';
+  const zHtml=_bonusZones.map((z,i)=>'<label style="'+rowStyle+'"><input type="checkbox" id="bg-z-'+i+'" checked onchange="majBonusGroupe()" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0"><span>'+(z?escBonus(z):'(Sans zone)')+'</span></label>').join('');
+  let h='<div class="modal-title">🎁 Bonus de jours <button class="modal-close" onclick="closeModal()">×</button></div>';
+  h+='<label class="inp-label">Nombre de jours de bonus (1 a 30)</label>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-ghost" style="flex:1;margin:0;padding:10px" onclick="setBonusJours(\'bg-jours\',1);majBonusGroupe()">+1</button><button class="btn btn-ghost" style="flex:1;margin:0;padding:10px" onclick="setBonusJours(\'bg-jours\',2);majBonusGroupe()">+2</button><button class="btn btn-ghost" style="flex:1;margin:0;padding:10px" onclick="setBonusJours(\'bg-jours\',3);majBonusGroupe()">+3</button></div>';
+  h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><button class="btn btn-ghost" style="width:44px;margin:0;padding:10px 0" onclick="stepBonus(\'bg-jours\',-1);majBonusGroupe()">−</button><input class="inp" type="number" id="bg-jours" min="1" max="30" value="1" oninput="majBonusGroupe()" style="margin:0;flex:1;text-align:center"><button class="btn btn-ghost" style="width:44px;margin:0;padding:10px 0" onclick="stepBonus(\'bg-jours\',1);majBonusGroupe()">+</button></div>';
+  h+='<label class="inp-label">Zones concernees</label>'+zHtml;
+  h+='<label class="inp-label" style="margin-top:10px">Tarif</label><select class="inp" id="bg-tarif" onchange="majBonusGroupe()"><option value="tous">Tous les tarifs</option><option value="ancien">Ancien tarif seulement</option><option value="nouveau">Nouveau tarif seulement</option></select>';
+  h+='<label class="inp-label">Clients concernes</label><div id="bg-resume" class="info-box" style="max-height:220px;overflow-y:auto;margin-bottom:12px"></div>';
+  h+='<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:12px;cursor:pointer"><input type="checkbox" id="bg-msg" checked style="width:16px;height:16px;accent-color:var(--accent)">Prevenir les clients par message</label>';
+  h+='<button class="btn btn-success btn-full" id="bg-btn" onclick="appliquerBonusGroupe()">🎁 Appliquer le bonus</button><button class="btn btn-ghost btn-full" onclick="closeModal()">Annuler</button>';
+  showModal(h);
+  majBonusGroupe();
+}
+function ciblesBonusGroupe(){
+  const zonesOk=new Set();
+  _bonusZones.forEach((z,i)=>{const el=document.getElementById('bg-z-'+i);if(el&&el.checked)zonesOk.add(z);});
+  const tarif=(document.getElementById('bg-tarif')||{}).value||'tous';
+  return _bonusClients.filter(c=>zonesOk.has(c.zone||'')&&(tarif==='tous'||tarifKey(c)===tarif));
+}
+function majBonusGroupe(){
+  const box=document.getElementById('bg-resume');if(!box)return;
+  const jours=lireJoursBonus('bg-jours');
+  const cibles=ciblesBonusGroupe();
+  const ok=cibles.filter(bonusEligible),ign=cibles.length-ok.length;
+  let h='<div style="font-weight:700;margin-bottom:6px">'+ok.length+' client(s) concerne(s)</div>';
+  if(ign>0)h+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+ign+' ignore(s) : expires, en attente ou sans date de fin</div>';
+  if(jours===null)h+='<div style="font-size:12px;color:var(--danger2)">Entrez un nombre de jours entre 1 et 30.</div>';
+  else h+=ok.map(c=>'<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)"><span>'+escBonus(c.name)+'</span><span style="color:var(--text3);white-space:nowrap">'+fmtDate(c.expiry_date)+' → '+fmtDate(ajouterJoursStr(c.expiry_date,jours))+'</span></div>').join('');
+  box.innerHTML=h;
+  const btn=document.getElementById('bg-btn');
+  if(btn){const dispo=jours!==null&&ok.length>0;btn.disabled=!dispo;btn.style.opacity=dispo?'1':'0.5';}
+}
+async function appliquerBonusGroupe(){
+  if(_bonusEnCours)return;
+  const jours=lireJoursBonus('bg-jours');
+  if(jours===null){toast('Entrez un nombre de jours entre 1 et 30.','error');return;}
+  const ids=ciblesBonusGroupe().filter(bonusEligible).map(c=>c.id);
+  if(!ids.length){toast('Aucun client concerne.','error');return;}
+  if(!confirm('Ajouter '+jours+' jour(s) de bonus a '+ids.length+' client(s) ?'))return;
+  await executerBonus(ids,jours,!!(document.getElementById('bg-msg')||{}).checked,true,null);
+}
+// --- Bonus pour un seul client (fiche client) ---
+async function appliquerBonusClient(id){
+  if(_bonusEnCours)return;
+  const jours=lireJoursBonus('bc-jours');
+  if(jours===null){toast('Entrez un nombre de jours entre 1 et 30.','error');return;}
+  if(!confirm('Ajouter '+jours+' jour(s) de bonus a ce client ?'))return;
+  await executerBonus([id],jours,!!(document.getElementById('bc-msg')||{}).checked,false,id);
+}
+// --- Application reelle (donnees relues a l'instant T, modification protegee) ---
+async function executerBonus(ids,jours,envoyerMsg,groupe,clientId){
+  _bonusEnCours=true;
+  const btn=document.getElementById(groupe?'bg-btn':'bc-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Application en cours...';}
+  const res={ok:[],ko:[],ignores:0,msgKo:0,erreur:false};
+  try{
+    const frais=await sbGet('clients','select=id,name,status,expiry_date');
+    const set=new Set(ids.map(String));
+    const eligibles=frais.filter(c=>set.has(String(c.id))&&bonusEligible(c));
+    res.ignores=ids.length-eligibles.length;
+    for(let i=0;i<eligibles.length;i+=5){
+      await Promise.all(eligibles.slice(i,i+5).map(async c=>{
+        const nd=ajouterJoursStr(c.expiry_date,jours);
+        let maj;
+        try{
+          // La condition sur l'ancienne date empeche d'appliquer deux fois ou sur une date deja modifiee
+          maj=await sbPatch('clients','id=eq.'+c.id+'&status=eq.active&expiry_date=eq.'+encodeURIComponent(c.expiry_date),{expiry_date:nd});
+        }catch(e){res.ko.push(c.name||'?');return;}
+        if(!Array.isArray(maj)||maj.length===0){res.ignores++;return;}
+        res.ok.push({name:c.name||'?',date:nd});
+        if(envoyerMsg){
+          try{await sbPost('messages',{client_id:c.id,sender:'admin',sender_name:'Admin',content:'🎁 Bonus offert : +'+jours+' jour'+(jours>1?'s':'')+' !\n\n📅 Votre abonnement est prolonge jusqu au '+fmtDateFull(nd)+' a 23h59.'});}
+          catch(e){res.msgKo++;}
+        }
+      }));
+    }
+  }catch(e){res.erreur=true;}
+  _bonusEnCours=false;
+  window.ntyClientsCache=null;
+  if(!groupe){
+    if(res.ok.length)toast('🎁 +'+jours+' jour'+(jours>1?'s':'')+' de bonus ajoute(s) !');
+    else toast(res.erreur||res.ko.length?'Erreur : bonus non applique.':'Bonus non applique (client non actif ou modifie entre-temps).','error');
+    openDetail(clientId);
+    return;
+  }
+  let h='<div style="text-align:center;padding:8px 0"><div style="font-size:48px;margin-bottom:8px">'+(res.ko.length||res.erreur?'⚠️':'🎁')+'</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">'+(res.ok.length?'Bonus applique':'Aucun bonus applique')+'</div></div>';
+  h+='<div class="info-box" style="margin-bottom:12px;font-size:13px"><div class="info-row"><div class="info-key">Clients prolonges</div><div class="info-val">'+res.ok.length+' (+'+jours+' j)</div></div>';
+  if(res.ignores)h+='<div class="info-row"><div class="info-key">Ignores</div><div class="info-val">'+res.ignores+'</div></div>';
+  if(res.ko.length)h+='<div class="info-row"><div class="info-key">Erreurs</div><div class="info-val" style="color:var(--danger2)">'+res.ko.map(escBonus).join(', ')+'</div></div>';
+  if(res.msgKo)h+='<div class="info-row"><div class="info-key">Messages non envoyes</div><div class="info-val">'+res.msgKo+'</div></div>';
+  if(res.erreur)h+='<div class="info-row"><div class="info-key">Erreur reseau</div><div class="info-val" style="color:var(--danger2)">Verifiez la liste des clients</div></div>';
+  h+='</div><button class="btn btn-primary btn-full" onclick="closeModal();renderAdminClients()">OK ✓</button>';
+  showModal(h);
+}
 let coupureActive=localStorage.getItem('nty_coupure')==='true';
 let coupureMsg=localStorage.getItem('nty_coupure_msg')||'Coupure electrique en cours.';
 
@@ -1055,6 +1182,7 @@ async function renderAdminClients(search=''){
     const [clients,freeT]=await Promise.all([sbGet('clients',q),sbGet('tickets','is_used=eq.false')]);
     const tCount={};freeT.forEach(t=>{tCount[t.client_id]=(tCount[t.client_id]||0)+1;});
     let html='<div class="fade-up"><div class="page-header-row"><div><div class="page-title">👥 Clients</div><div class="page-sub">'+clients.length+' client(s)</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="exportClientsExcel()">📊 Excel</button><button class="btn btn-ghost btn-sm" onclick="exportClientsPDF()">📄 PDF</button><button class="btn btn-primary btn-sm" onclick="showAddClient()">+ Ajouter</button></div></div>';
+    html+='<button class="btn btn-secondary btn-full" style="margin-bottom:12px" onclick="showBonusGroupe()">🎁 Bonus de jours (par groupe)</button>';
     html+='<div class="search-box"><span class="search-icon">🔍</span><input class="search-inp" type="text" placeholder="Rechercher..." value="'+search+'" oninput="renderAdminClients(this.value)"></div>';
     if(!clients.length)html+='<div class="empty"><div class="empty-icon">👤</div><p>Aucun client</p></div>';
     else{
@@ -1212,6 +1340,14 @@ async function openDetail(id){
       html+='</div><button class="btn btn-ghost btn-full" style="margin-bottom:8px" onclick="setConsumption(\''+id+'\',0)">↺ Reinitialiser</button>';
     }
 
+    if(bonusEligible(cl)){
+      html+='<div class="divider"></div><div class="inp-label">🎁 Bonus de jours</div>';
+      html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><button class="btn btn-ghost" style="width:44px;margin:0;padding:10px 0" onclick="stepBonus(\'bc-jours\',-1)">−</button><input class="inp" type="number" id="bc-jours" min="1" max="30" value="1" style="margin:0;flex:1;text-align:center"><button class="btn btn-ghost" style="width:44px;margin:0;padding:10px 0" onclick="stepBonus(\'bc-jours\',1)">+</button></div>';
+      html+='<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:8px;cursor:pointer"><input type="checkbox" id="bc-msg" checked style="width:16px;height:16px;accent-color:var(--accent)">Prevenir le client par message</label>';
+      html+='<button class="btn btn-secondary btn-full" id="bc-btn" onclick="appliquerBonusClient(\''+id+'\')">🎁 Ajouter le bonus</button>';
+    }else{
+      html+='<div class="divider"></div><div class="inp-label">🎁 Bonus de jours</div><div style="font-size:12px;color:var(--text3);margin-bottom:8px">Disponible uniquement pour un client actif avec une date de fin valide.</div>';
+    }
     html+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-success" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'active\')">✓ Activer</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="quickStatus(\''+id+'\',\'expired\')">✗ Expirer</button></div>';
     html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);width:100%" onclick="deleteClient(\''+id+'\',\''+cl.name+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button></div>';
 
