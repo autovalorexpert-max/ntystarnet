@@ -190,6 +190,68 @@ function lireBlocTarif(prefix){
   return {tarif,plan,extra,plan_price:fmtPrix(prixDuPlan(plan,tarif,extra))};
 }
 
+// ═══ PERFORMANCE : ne plus telecharger les photos dans les listes ═══
+// Les captures de paiement (photo_url) et les photos de chat pesent plusieurs Mo chacune.
+// Les listes (dashboard, paiements, stats, messages) chargent donc uniquement le texte ;
+// la photo n'est telechargee que lorsqu'on clique sur "Voir la preuve".
+const PAY_LIGHT='id,client_id,client_name,plan,amount,payment_date,reference,status,payment_type,montant_recu,operateur,prorata_new_day,prorata_next_date,created_at';
+async function sbGetPayLight(query){
+  try{return await sbGet('payments','select='+PAY_LIGHT+(query?'&'+query:''));}
+  catch(e){return await sbGet('payments',query||'');}   // secours : ancienne methode (plus lente mais sure)
+}
+async function chargerDerniersMessages(){
+  // Dernier message de chaque client SANS telecharger le contenu des photos
+  const last={};
+  try{
+    const motif=encodeURIComponent('[IMG]*');
+    const [txt,img]=await Promise.all([
+      sbGet('messages','select=client_id,content,created_at&content=not.like.'+motif+'&order=created_at.desc&limit=2000'),
+      sbGet('messages','select=client_id,created_at&content=like.'+motif+'&order=created_at.desc&limit=2000')
+    ]);
+    txt.forEach(m=>{if(!last[m.client_id])last[m.client_id]=m;});
+    img.forEach(m=>{const l=last[m.client_id];if(!l||new Date(m.created_at)>new Date(l.created_at))last[m.client_id]={client_id:m.client_id,content:'[IMG]',created_at:m.created_at};});
+    return last;
+  }catch(e){
+    const all=await sbGet('messages','order=created_at.desc');
+    all.forEach(m=>{if(!last[m.client_id])last[m.client_id]=m;});
+    return last;
+  }
+}
+async function voirPreuve(id){
+  const titre='<div class="modal-title">Preuve <button class="modal-close" onclick="closeModal()">×</button></div>';
+  showModal(titre+'<div class="loading"><div class="spinner"></div><p>Chargement de la photo...</p></div>');
+  try{
+    const r=await sbGet('payments','id=eq.'+id+'&select=photo_url');
+    const url=r[0]&&r[0].photo_url;
+    if(!url){showModal(titre+'<div class="empty"><p>Aucune photo pour ce paiement.</p></div>');return;}
+    showModal(titre+'<img src="'+url+'" style="width:100%;border-radius:12px">');
+  }catch(e){closeModal();toast('Erreur de chargement de la photo','error');}
+}
+// Reduit le poids d'une photo AVANT stockage (OCR et detection de doublon continuent d'utiliser l'original)
+function compresserDataUrl(dataUrl,maxSide,quality){
+  maxSide=maxSide||1600;quality=quality||0.72;
+  return new Promise(resolve=>{
+    try{
+      if(!dataUrl||typeof dataUrl!=='string'||dataUrl.indexOf('data:image/')!==0){resolve(dataUrl);return;}
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+          if(!w||!h){resolve(dataUrl);return;}
+          const k=Math.min(1,maxSide/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+          const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+          const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+          const out=cv.toDataURL('image/jpeg',quality);
+          resolve(out&&out.length<dataUrl.length?out:dataUrl);
+        }catch(e){resolve(dataUrl);}
+      };
+      img.onerror=()=>resolve(dataUrl);
+      setTimeout(()=>resolve(dataUrl),5000);   // securite : ne bloque jamais l'envoi
+      img.src=dataUrl;
+    }catch(e){resolve(dataUrl);}
+  });
+}
+
 // ═══ BONUS DE JOURS (par client ou par groupe) ═══
 // Regle : le bonus prolonge la date de fin (expiry_date) des clients ACTIFS dont la date n'est pas depassee.
 let _bonusClients=[],_bonusZones=[],_bonusEnCours=false;
@@ -625,7 +687,7 @@ async function submitProrata(newDay,amount,nextDate){
   const d=document.getElementById('prorata-paydate').value;
   if(!d){toast('Veuillez indiquer la date du paiement.','error');return;}
   try{
-    await sbPost('payments',{client_id:me.id,client_name:me.name,plan:'Changement date → le '+newDay+' du mois',amount:amount,payment_date:d,reference:document.getElementById('prorata-ref').value||null,status:'pending',photo_url:photoData,payment_type:'prorata',prorata_new_day:parseInt(newDay),prorata_next_date:nextDate});
+    await sbPost('payments',{client_id:me.id,client_name:me.name,plan:'Changement date → le '+newDay+' du mois',amount:amount,payment_date:d,reference:document.getElementById('prorata-ref').value||null,status:'pending',photo_url:await compresserDataUrl(photoData),payment_type:'prorata',prorata_new_day:parseInt(newDay),prorata_next_date:nextDate});
     closeModal();launchConfetti();
     showModal('<div style="text-align:center;padding:16px"><div style="font-size:56px;margin-bottom:16px">🎉</div><div class="modal-title" style="justify-content:center;margin-bottom:8px">Demande de prorata envoyee !</div><p style="color:var(--text2);font-size:13px;margin-bottom:20px">L administrateur va valider votre prorata. Apres validation, votre date de renouvellement sera le <strong>'+newDay+'</strong> de chaque mois !</p><button class="btn btn-primary btn-full" onclick="closeModal();cPage(\'home\',document.getElementById(\'cnav-home\'))">OK ✓</button></div>');
   }catch(e){toast('Erreur lors de l envoi.','error');}
@@ -737,13 +799,13 @@ async function submitPay(){
   try{
     const photoHash=await hashImage(photoData);
 
-    const pendingExistants=await sbGet('payments','client_id=eq.'+me.id+'&plan=eq.'+encodeURIComponent(selPlanName)+'&status=eq.pending&payment_type=eq.abonnement&order=created_at.desc&limit=1').catch(()=>[]);
+    const pendingExistants=await sbGet('payments','client_id=eq.'+me.id+'&plan=eq.'+encodeURIComponent(selPlanName)+'&status=eq.pending&payment_type=eq.abonnement&order=created_at.desc&limit=1&select=id,montant_recu').catch(()=>[]);
     const estComplement=pendingExistants.length>0;
     const montantDejaRecu=estComplement?(parseFloat(pendingExistants[0].montant_recu)||0):0;
 
     let estDoublon=false;
     if(photoHash){
-      const dejaUtilise=await sbGet('payments','photo_hash=eq.'+photoHash+'&status=eq.validated&limit=1').catch(()=>[]);
+      const dejaUtilise=await sbGet('payments','photo_hash=eq.'+photoHash+'&status=eq.validated&limit=1&select=id').catch(()=>[]);
       estDoublon=dejaUtilise.length>0;
     }
 
@@ -751,7 +813,7 @@ async function submitPay(){
     const montantDetecte=analyse&&analyse.lisible&&typeof analyse.montant==='number'?analyse.montant:null;
     const montantCumule=montantDejaRecu+(montantDetecte||0);
 
-    const payload={client_id:me.id,client_name:me.name,plan:selPlanName,amount:prixFmt,payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:photoData,payment_type:'abonnement',photo_hash:photoHash,montant_recu:montantCumule,operateur:operateur};
+    const payload={client_id:me.id,client_name:me.name,plan:selPlanName,amount:prixFmt,payment_date:d,reference:document.getElementById('c-payref').value||null,status:'pending',photo_url:await compresserDataUrl(photoData),payment_type:'abonnement',photo_hash:photoHash,montant_recu:montantCumule,operateur:operateur};
 
     let paymentId;
     if(estComplement){
@@ -873,7 +935,7 @@ async function sendAdminPhoto(){
   const f=document.getElementById('admin-photo-inp').files[0];if(!f)return;
   if(f.size>5*1024*1024){toast('Image trop grande (max 5MB)','error');return;}
   const r=new FileReader();r.onload=async e=>{
-    try{await sbPost('messages',{client_id:me.id,sender:'client',sender_name:me.name,content:'[IMG]'+e.target.result});toast('📷 Photo envoyee !');renderClientMessages();setTimeout(()=>switchChatTab('admin'),100);}
+    try{await sbPost('messages',{client_id:me.id,sender:'client',sender_name:me.name,content:'[IMG]'+await compresserDataUrl(e.target.result)});toast('📷 Photo envoyee !');renderClientMessages();setTimeout(()=>switchChatTab('admin'),100);}
     catch(err){toast('Erreur envoi photo','error');}
   };r.readAsDataURL(f);
 }
@@ -980,7 +1042,7 @@ async function renderAdminDashboard(){
   try{
     const [clients,payments,inscrip,zones,ticketsLibres]=await Promise.all([
       sbGet('clients'),
-      sbGet('payments','order=created_at.desc'),
+      sbGetPayLight('order=created_at.desc'),
       sbGet('inscriptions','status=eq.pending').catch(()=>[]),
       sbGet('zones','order=name.asc').catch(()=>[]),
       sbGet('tickets','is_used=eq.false&select=client_id').catch(()=>[])
@@ -1204,7 +1266,7 @@ async function renderAdminPaiements(filter='pending'){
   c.innerHTML='<div class="loading"><div class="spinner"></div><p>Chargement des paiements...</p></div>';
   try{
     let q='order=created_at.desc&limit=50';if(filter)q+='&status=eq.'+filter;
-    const [pays,freeT]=await Promise.all([sbGet('payments',q),filter==='pending'||filter===''?sbGet('tickets','is_used=eq.false&order=created_at.asc'):Promise.resolve([])]);
+    const [pays,freeT]=await Promise.all([sbGetPayLight(q),filter==='pending'||filter===''?sbGet('tickets','is_used=eq.false&order=created_at.asc'):Promise.resolve([])]);
     const nextByClient={};freeT.forEach(t=>{if(!nextByClient[t.client_id])nextByClient[t.client_id]=t;});
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">💳 Paiements</div></div>';
     html+='<div class="filter-tabs"><button class="ftab '+(filter==='pending'?'active':'')+'" onclick="renderAdminPaiements(\'pending\')">En attente</button><button class="ftab '+(filter==='validated'?'active':'')+'" onclick="renderAdminPaiements(\'validated\')">Valides</button><button class="ftab '+(filter===''?'active':'')+'" onclick="renderAdminPaiements(\'\')">Tous</button></div>';
@@ -1221,7 +1283,7 @@ async function renderAdminPaiements(filter='pending'){
         if(isProrata)html+='<div class="ticket-preview">📅 Nouvelle date: le <strong>'+p.prorata_new_day+'</strong> de chaque mois · Valable jusqu au <strong>'+fmtDate(p.prorata_next_date)+'</strong></div>';
         html+='<div class="pay-card-btns"><button class="btn btn-success" style="flex:2;padding:10px;margin:0;font-size:13px" onclick="openValidate(\''+p.id+'\')">✓ Valider</button><button class="btn btn-danger" style="flex:1;padding:10px;margin:0;font-size:13px" onclick="curPayId=\''+p.id+'\';rejectConfirm()">✗</button></div>';
       }
-      if(p.photo_url)html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="showModal(\'<div class=modal-title>Preuve <button class=modal-close onclick=closeModal()>×</button></div><img src=&quot;'+p.photo_url+'&quot; style=&quot;width:100%;border-radius:12px&quot;>\')">📷 Voir la preuve</button>';
+      html+='<button class="btn btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;width:auto" onclick="voirPreuve(\''+p.id+'\')">📷 Voir la preuve</button>';
       if(p.status!=='pending')html+='<button class="btn" style="margin-top:8px;background:rgba(239,68,68,0.08);color:var(--danger2);border:1px solid rgba(239,68,68,0.2);font-size:12px;padding:8px 14px;width:auto" onclick="deletePayment(\''+p.id+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Supprimer</button>';
       html+='</div>';
     });
@@ -1305,7 +1367,7 @@ async function doReject(){
 async function openDetail(id){
   curDetailId=id;
   try{
-    const [clients,tickets,clientPays]=await Promise.all([sbGet('clients','id=eq.'+id),sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc'),sbGet('payments','client_id=eq.'+id+'&status=eq.validated&payment_type=neq.prorata').catch(()=>[])]);
+    const [clients,tickets,clientPays]=await Promise.all([sbGet('clients','id=eq.'+id),sbGet('tickets','client_id=eq.'+id+'&order=created_at.asc'),sbGetPayLight('client_id=eq.'+id+'&status=eq.validated&payment_type=neq.prorata').catch(()=>[])]);
     const cl=clients[0];const freeT=tickets.filter(t=>!t.is_used);const dl=daysLeft(cl.expiry_date);
     const streak=clientPays.length;
     let editZones=[];try{editZones=await sbGet('zones','order=name.asc');}catch(e){}
@@ -1442,8 +1504,7 @@ async function addClient(){
 async function renderAdminMessages(){
   const c=document.getElementById('a-content');
   try{
-    const [clients,allMsgs]=await Promise.all([sbGet('clients','order=created_at.desc'),sbGet('messages','order=created_at.desc')]);
-    const lastMsg={};allMsgs.forEach(m=>{if(!lastMsg[m.client_id])lastMsg[m.client_id]=m;});
+    const [clients,lastMsg]=await Promise.all([sbGet('clients','order=created_at.desc'),chargerDerniersMessages()]);
     let html='<div class="fade-up"><div class="page-header"><div class="page-title">💬 Messages</div></div>';
     if(!clients.length)html+='<div class="empty"><div class="empty-icon">💬</div><p>Aucun client</p></div>';
     else clients.forEach(cl=>{
@@ -1481,7 +1542,7 @@ async function aSendMsg(){
 async function renderAdminStats(){
   const c=document.getElementById('a-content');
   try{
-    const [clients,payments]=await Promise.all([sbGet('clients'),sbGet('payments')]);
+    const [clients,payments]=await Promise.all([sbGet('clients'),sbGetPayLight('')]);
     const validated=payments.filter(p=>p.status==='validated');
     const revenue=validated.reduce((s,p)=>s+(parseInt((p.amount||'0').replace(/\./g,''))||0),0);
     const proratas=validated.filter(p=>p.payment_type==='prorata');
